@@ -1,20 +1,32 @@
-package edu.upc.epsevg.prop.othello.players.players.hellowda;
+package edu.upc.epsevg.prop.othello.players.hellowda;
 
+
+import edu.upc.epsevg.prop.othello.CellType;
 import edu.upc.epsevg.prop.othello.GameStatus;
+import edu.upc.epsevg.prop.othello.IAuto;
 import edu.upc.epsevg.prop.othello.IPlayer;
 import edu.upc.epsevg.prop.othello.Move;
-
+import edu.upc.epsevg.prop.othello.SearchType;
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.Random;
 
 /**
- * Jugador humà de LOA
+ * Jugador aleatori
  * @author bernat
  */
-public class Hellowda implements IPlayer {
+public class Hellowda implements IPlayer, IAuto {
 
-    String name;
+    private String name;
+    private GameStatus s;
 
     public Hellowda(String name) {
         this.name = name;
+    }
+
+    @Override
+    public void timeout() {
+        // Nothing to do! I'm so fast, I never timeout 8-)
     }
 
     /**
@@ -26,7 +38,17 @@ public class Hellowda implements IPlayer {
      */
     @Override
     public Move move(GameStatus s) {
-        return null;
+
+        ArrayList<Point> moves =  s.getMoves();
+        if(moves.isEmpty())
+        {
+            // no podem moure, el moviment (de tipus Point) es passa null.
+            return new Move(null, 0L,0,  SearchType.RANDOM); 
+        } else {
+            Random rand = new Random();
+            int q = rand.nextInt(moves.size());
+            return new Move( moves.get(q), 0L, 0, SearchType.RANDOM);         
+        }
     }
 
     /**
@@ -34,18 +56,8 @@ public class Hellowda implements IPlayer {
      * de joc.
      */
     @Override
-    public void timeout() {
-        // Bah! Humans do not enjoy timeouts, oh, poor beasts !
-        System.out.println("Bah! You are so slow...");
+    public String getName() {
+        return "Random(" + name + ")";
     }
 
-    /**
-     * Retorna el nom del jugador que s'utlilitza per visualització a la UI
-     *
-     * @return Nom del jugador
-     */
-    @Override
-    public String getName() {
-        return "Human(" + name + ")";
-    }
 }
