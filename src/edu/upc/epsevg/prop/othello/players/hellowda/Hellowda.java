@@ -1,13 +1,51 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-package edu.upc.epsevg.prop.othello.players.hellowda;
+package edu.upc.epsevg.prop.othello.players.players.hellowda;
+
+import edu.upc.epsevg.prop.othello.GameStatus;
+import edu.upc.epsevg.prop.othello.IPlayer;
+import edu.upc.epsevg.prop.othello.Move;
+
 
 /**
- *
- * @author HENOK
+ * Jugador humà de LOA
+ * @author bernat
  */
-public class Hellowda implements IPlayer, IAuto {
-    
+public class Hellowda implements IPlayer {
+
+    String name;
+
+    public Hellowda(String name) {
+        this.name = name;
+    }
+
+    /**
+     * Decideix el moviment del jugador donat un tauler i un color de peça que
+     * ha de posar.
+     *
+     * @param s Tauler i estat actual de joc.
+     * @return el moviment que fa el jugador.
+     */
+    @Override
+    public Move move(GameStatus s) {
+        return null;
+    }
+
+    /**
+     * Ens avisa que hem de parar la cerca en curs perquè s'ha exhaurit el temps
+     * de joc.
+     */
+    @Override
+    public void timeout() {
+        // Bah! Humans do not enjoy timeouts, oh, poor beasts !
+        System.out.println("Bah! You are so slow...");
+    }
+
+    /**
+     * Retorna el nom del jugador que s'utlilitza per visualització a la UI
+     *
+     * @return Nom del jugador
+     */
+    @Override
+    public String getName() {
+        return "Human(" + name + ")";
+    }
 }
