@@ -1,4 +1,4 @@
-package edu.upc.epsevg.prop.othello.players.hellowda;
+package edu.upc.epsevg.prop.othello.players.hellouda;
 
 
 import edu.upc.epsevg.prop.othello.CellType;
@@ -15,12 +15,12 @@ import java.util.Random;
  * Jugador aleatori
  * @author bernat
  */
-public class Hellowda implements IPlayer, IAuto {
+public class Hellouda implements IPlayer, IAuto {
 
     private String name;
     private GameStatus s;
 
-    public Hellowda(String name) {
+    public Hellouda(String name) {
         this.name = name;
     }
 
@@ -57,7 +57,7 @@ public class Hellowda implements IPlayer, IAuto {
      */
     @Override
     public String getName() {
-        return "Random(" + name + ")";
+        return "Hellowda(" + name + ")";
     }
 
 }
