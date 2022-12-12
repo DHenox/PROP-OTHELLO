@@ -86,6 +86,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
     }
 
     int minValor(GameStatus s, int depth){
+        //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
                 return 1000000;
@@ -99,13 +100,16 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
             GameStatus fill = new GameStatus(s);
+            //System.out.println(fill.getCurrentPlayer()); 
             fill.movePiece(moves.get(i));
+             
             minEval = Math.min(minEval, maxValor(fill, depth-1));
         }
         return minEval;
     }
 
     int maxValor(GameStatus s, int depth){
+        //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
                 return 1000000;
@@ -115,7 +119,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
             return heuristica(s, s.getCurrentPlayer());
         }
-        int maxEval = Integer.MAX_VALUE;
+        int maxEval = Integer.MIN_VALUE+1;
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
             GameStatus fill = new GameStatus(s);
@@ -126,25 +130,57 @@ public class PlayerMiniMax implements IPlayer, IAuto {
     }
 
     public int heuristica(GameStatus s, CellType player){
+        int h = 0;
+        CellType contrari = CellType.opposite(player);
+        //System.out.println(player +" "+ contrari);
+        //aqui calculem, corners moviments i paritat (corners * 100,moviments * 5, paritat * 25, 25 * stabilitat)
+        //Res is 100 * Res_corners + 5 * Res_mobility + 25 * Res_coinParity + 25 * Res_stability.
+        h += heur(s, player);
+        h -= heur(s, contrari);
+        int stability = 0;
+        /*for (int i = 0; i < stabilityTable.length; i++) {
+            for (int j = 0; j < stabilityTable.length; j++) {
+                if(s.getPos(i, j) == player){
+                    stability += stabilityTable[i][j];
+                }
+                if(s.getPos(i, j) == contrari){
+                    stability -= stabilityTable[i][j];
+                }
+            }
+        }*/
+        h+=stability * 5;
+        //System.out.println(h+" " +player);
+        return h;
+    }
+    
+    public int heur(GameStatus s, CellType player){
         //  mirar corners 
         //  mirar quantes fitxer te cadascu
         //  mirar posibles moviments
-
         //Coin Parity Heuristic Value =
         //100 * (Max Player Coins - Min Player Coins ) / (Max Player Coins + Min Player Coins)
         int heur = 0;
         
-        int fitxes = s.getScore(player);
-        heur += fitxes;
+        int paritat = s.getScore(player);
+        heur += paritat * 5;
         
         int moviments = s.getMoves().size();
         heur += moviments;
-        
-        for (int i = 0; i < stabilityTable.length; i++) {
-            for (int j = 0; j < stabilityTable.length; j++) {
-                heur += stabilityTable[i][j];
-            }
+
+        int corners = 0;
+        if(s.getPos(0,0) == player){
+            corners += 5;
         }
+        if(s.getPos(s.getSize()-1,s.getSize()-1) == player){
+            corners += 5;
+        }
+        if(s.getPos(0,s.getSize()-1) == player){
+            corners += 5;
+        }
+        if(s.getPos(s.getSize()-1, 0) == player){
+            corners += 5;
+        }
+        heur += corners * 1000;
         
         return heur;
     }
