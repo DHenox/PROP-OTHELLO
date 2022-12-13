@@ -63,7 +63,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         
         myType = s.getCurrentPlayer();
         hisType = CellType.opposite(myType);
-        Point mov = triaPosició(s, 6);
+        Point mov = triaPosició(s, 9);
         return new Move( mov, 0L, 0, SearchType.RANDOM);
         //return move (posicio, 0, 0, MINIMAX)
     }
@@ -76,7 +76,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         for (int i = 0; i < moves.size(); i++) {
             GameStatus fill = new GameStatus(s);
             fill.movePiece(moves.get(i));
-            int eval = minValor(fill, depth-1);
+            int eval = minValor(fill, depth-1, Integer.MAX_VALUE, Integer.MIN_VALUE);
             if(maxEval < eval){
                 maxEval = eval;
                 bestMove = moves.get(i);
@@ -85,7 +85,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         return bestMove;
     }
 
-    int minValor(GameStatus s, int depth){
+    int minValor(GameStatus s, int depth, int beta, int alpha){
         //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
@@ -103,12 +103,17 @@ public class PlayerMiniMax implements IPlayer, IAuto {
             //System.out.println(fill.getCurrentPlayer()); 
             fill.movePiece(moves.get(i));
              
-            minEval = Math.min(minEval, maxValor(fill, depth-1));
+            minEval = Math.min(minEval, maxValor(fill, depth-1, beta, alpha));
+            beta = Math.min(beta, minEval);
+                if(alpha>=beta){
+                    break;
+                }
+            
         }
-        return minEval;
+           return minEval;
     }
 
-    int maxValor(GameStatus s, int depth){
+    int maxValor(GameStatus s, int depth, int beta, int alpha){
         //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
@@ -124,8 +129,13 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         for (int i = 0; i < moves.size(); i++) {
             GameStatus fill = new GameStatus(s);
             fill.movePiece(moves.get(i));
-            maxEval = Math.max(maxEval, minValor(fill, depth-1));
+            maxEval = Math.max(maxEval, minValor(fill, depth-1, beta, alpha));
+            alpha = Math.max(alpha, maxEval);
+                if(alpha>=beta){
+                    break;
+                }
         }
+        
         return maxEval;
     }
 
@@ -138,7 +148,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         h += heur(s, player);
         h -= heur(s, contrari);
         int stability = 0;
-        /*for (int i = 0; i < stabilityTable.length; i++) {
+        for (int i = 0; i < stabilityTable.length; i++) {
             for (int j = 0; j < stabilityTable.length; j++) {
                 if(s.getPos(i, j) == player){
                     stability += stabilityTable[i][j];
@@ -147,7 +157,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                     stability -= stabilityTable[i][j];
                 }
             }
-        }*/
+        }
         h+=stability * 5;
         //System.out.println(h+" " +player);
         return h;
