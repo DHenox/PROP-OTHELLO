@@ -17,10 +17,11 @@ import java.util.ArrayList;
  * @author bernat
  */
 public class PlayerMiniMax implements IPlayer, IAuto {
-
+    private int ContaNodes;
     private String name;
     private GameStatus s;
     private CellType myType;
+    private int EDGE_BONUS = 5;
     private CellType hisType;
     private int[][] stabilityTable = {
         {4,  -3,  2,  2,  2,  2, -3,  4,},
@@ -60,11 +61,11 @@ public class PlayerMiniMax implements IPlayer, IAuto {
      */
     @Override
     public Move move(GameStatus s) {
-        
+        ContaNodes = 0;
         myType = s.getCurrentPlayer();
         hisType = CellType.opposite(myType);
-        Point mov = triaPosició(s, 9);
-        return new Move( mov, 0L, 0, SearchType.RANDOM);
+        Point mov = triaPosició(s, 8);
+        return new Move( mov, this.ContaNodes, 0, SearchType.MINIMAX);
         //return move (posicio, 0, 0, MINIMAX)
     }
     
@@ -139,59 +140,260 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         return maxEval;
     }
 
-    public int heuristica(GameStatus s, CellType player){
-        int h = 0;
-        CellType contrari = CellType.opposite(player);
-        //System.out.println(player +" "+ contrari);
-        //aqui calculem, corners moviments i paritat (corners * 100,moviments * 5, paritat * 25, 25 * stabilitat)
-        //Res is 100 * Res_corners + 5 * Res_mobility + 25 * Res_coinParity + 25 * Res_stability.
-        h += heur(s, player);
-        h -= heur(s, contrari);
-        int stability = 0;
-        for (int i = 0; i < stabilityTable.length; i++) {
-            for (int j = 0; j < stabilityTable.length; j++) {
-                if(s.getPos(i, j) == player){
-                    stability += stabilityTable[i][j];
+        
+   public int  paritat(GameStatus s, CellType player){
+       int par1 = s.getScore(player);
+       int par2 = s.getScore((CellType.opposite(player)));
+       
+       if(par1>par2){
+           return 100*((par1)/(par1 + par2));
+       }
+       else if(par1<par2){
+           return 100*((par2)/(par1 + par2));
+       }
+       else{
+           return 0;
+       }
+   }
+   
+   public int corner (GameStatus s, CellType player){
+       int myTiles = 0;
+       int oppTiles = 0;
+            if (s.getPos(0,0) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(0,0) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            if (s.getPos(0,s.getSize()-1) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(0,s.getSize()-1) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            if (s.getPos(s.getSize()-1,0) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(s.getSize()-1,0) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(s.getSize()-1, s.getSize()-1) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            
+            return (myTiles-oppTiles);
+        }
+   
+
+        
+    public static int heuristica(GameStatus s, CellType player) {
+        int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
+        double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
+
+        int[] X1 = {-1, -1, 0, 1, 1, 1, 0, -1};
+        int[] Y1 = {0, 1, 1, 1, 0, -1, -1, -1};
+        int[][] V = {
+            {20, -3, 11, 8, 8, 11, -3, 20},
+            {-3, -7, -4, 1, 1, -4, -7, -3},
+            {11, -4, 2, 2, 2, 2, -4, 11},
+            {8, 1, 2, -3, -3, 2, 1, 8},
+            {8, 1, 2, -3, -3, 2, 1, 8},
+            {11, -4, 2, 2, 2, 2, -4, 11},
+            {-3, -7, -4, 1, 1, -4, -7, -3},
+            {20, -3, 11, 8, 8, 11, -3, 20}
+        };
+        CellType opponent = CellType.opposite(player);
+
+        // Piece difference, frontier disks and disk squares
+        for (int i = 0; i < s.getSize(); i++) {
+            for (int j = 0; j < s.getSize(); j++) {
+                if (s.getPos(i,j) == player) {
+                    d += V[i][j];
+                    myTiles++;
+                } else if (s.getPos(i,j) == opponent) {
+                    d -= V[i][j];
+                    oppTiles++;
                 }
-                if(s.getPos(i, j) == contrari){
-                    stability -= stabilityTable[i][j];
+                if (s.getPos(i,j) == opponent || s.getPos(i,j) == player) {
+                    for (int k = 0; k < 8; k++) {
+                        int x = i + X1[k];
+                        int y = j + Y1[k];
+                        if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
+                            if (s.getPos(i,j) == player)  myFrontTiles++;
+                        } else {
+                            oppFrontTiles++;
+                        }
+                        break;
+                    }
                 }
             }
         }
-        h+=stability * 5;
-        //System.out.println(h+" " +player);
-        return h;
-    }
-    
-    public int heur(GameStatus s, CellType player){
-        //  mirar corners 
-        //  mirar quantes fitxer te cadascu
-        //  mirar posibles moviments
-        //Coin Parity Heuristic Value =
-        //100 * (Max Player Coins - Min Player Coins ) / (Max Player Coins + Min Player Coins)
-        int heur = 0;
-        
-        int paritat = s.getScore(player);
-        heur += paritat * 5;
-        
-        int moviments = s.getMoves().size();
-        heur += moviments;
 
-        int corners = 0;
-        if(s.getPos(0,0) == player){
-            corners += 5;
+        if (myTiles > oppTiles) {
+            p = (100.0 * myTiles) / (myTiles + oppTiles);
+        } else if (myTiles < oppTiles) {
+            p = -(100.0 * oppTiles) / (myTiles + oppTiles);
+        } else {
+            p = 0;
         }
-        if(s.getPos(s.getSize()-1,s.getSize()-1) == player){
-            corners += 5;
-        }
-        if(s.getPos(0,s.getSize()-1) == player){
-            corners += 5;
-        }
-        if(s.getPos(s.getSize()-1, 0) == player){
-            corners += 5;
-        }
-        heur += corners * 1000;
         
-        return heur;
-    }
+        if (myFrontTiles > oppFrontTiles) {
+            f = -(100.0 * myFrontTiles) / (myFrontTiles + oppFrontTiles);
+        } else if (myFrontTiles < oppFrontTiles) {
+            f = (100.0 * oppFrontTiles) / (myFrontTiles + oppFrontTiles);
+        } else {
+            f = 0;
+        }
+        
+        // Corner occupancy
+        myTiles = oppTiles = 0;
+        if (s.getPos(0,0) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(0,0) == (opponent)) {
+                oppTiles += 1;
+            }
+            if (s.getPos(0,s.getSize()-1) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(0,s.getSize()-1) == (opponent)) {
+                oppTiles += 1;
+            }
+            if (s.getPos(s.getSize()-1,0) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(s.getSize()-1,0) == (opponent)) {
+                oppTiles += 1;
+            }
+            if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(s.getSize()-1, s.getSize()-1) == (opponent)) {
+                oppTiles += 1;
+            }
+            
+        c = 25 * (myTiles - oppTiles);
+        
+        // Corner closeness
+        myTiles = oppTiles = 0;
+        if (!(s.getPos(0,0) == CellType.EMPTY)) {
+            if (s.getPos(0,1) == player) {
+                myTiles++;
+            } else if (s.getPos(0,1) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(1,1) == player) {
+                myTiles++;
+            } else if (s.getPos(1,1) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(1,0) == player) {
+                myTiles++;
+            } else if (s.getPos(1,0) == opponent) {
+                oppTiles++;
+            }
+        }
+        if (!(s.getPos(0,s.getSize()-1) == CellType.EMPTY)) {
+            if (s.getPos(0,6) == player) {
+                myTiles++;
+            } else if (s.getPos(0,6) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(1,6) == player) {
+                myTiles++;
+            } else if (s.getPos(1,6) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(1,s.getSize()-1) == player) {
+                myTiles++;
+            } else if (s.getPos(1,s.getSize()-1) == opponent) {
+                oppTiles++;
+            }
+        }
+        if (!(s.getPos(s.getSize()-1,0) == CellType.EMPTY)) {
+            if (s.getPos(s.getSize()-1,1) == player) {
+                myTiles++;
+            } else if (s.getPos(s.getSize()-1,1) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(6,1) == player) {
+                myTiles++;
+            } else if (s.getPos(6,1) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(6,0) == player) {
+                myTiles++;
+            } else if (s.getPos(6,0) == opponent) {
+                oppTiles++;
+            }
+        }
+        if (!(s.getPos(s.getSize()-1,s.getSize()-1) == CellType.EMPTY)) {
+            if (s.getPos(6,s.getSize()-1) == player) {
+                myTiles++;
+            } else if (s.getPos(6,s.getSize()-1) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(6,6) == player) {
+                myTiles++;
+            } else if (s.getPos(6,6) == opponent) {
+                oppTiles++;
+            }
+            if (s.getPos(s.getSize()-1,6) == player) {
+                myTiles++;
+            } else if (s.getPos(s.getSize()-1,6) == opponent) {
+                oppTiles++;
+            }
+        }
+        l = -12.5 * (myTiles - oppTiles);
+        
+        // Mobility
+        myTiles = oppTiles = 0;
+        for (int i = 0; i < s.getSize(); i++) {
+            for (int j = 0; j < s.getSize(); j++) {
+                if (!(s.getPos(0,0) == CellType.EMPTY)) {
+                    for (int k = 0; k < s.getSize(); k++) {
+                        int x = i + X1[k];
+                        int y = j + Y1[k];
+                        if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == opponent) {
+                            if (myTiles < 64) {
+                                myTiles++;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < s.getSize(); i++) {
+            for (int j = 0; j < s.getSize(); j++) {
+                if (!(s.getPos(0,0) == CellType.EMPTY)) {
+                    for (int k = 0; k < s.getSize(); k++) {
+                        int x = i + X1[k];
+                        int y = j + Y1[k];
+                        if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == player) {
+                            if (oppTiles < 64) {
+                                oppTiles++;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            }
+            if (myTiles > oppTiles) {
+                m = (100.0 * myTiles) / (myTiles + oppTiles);
+            } else if (myTiles < oppTiles) {
+                m = -(100.0 * oppTiles) / (myTiles + oppTiles);
+            } else {
+                m = 0;
+            }
+            // Final weighted score
+            int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
+            
+            return ret ;
+           }
 }
+
