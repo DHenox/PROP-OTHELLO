@@ -7,6 +7,7 @@ import edu.upc.epsevg.prop.othello.IAuto;
 import edu.upc.epsevg.prop.othello.IPlayer;
 import edu.upc.epsevg.prop.othello.Move;
 import edu.upc.epsevg.prop.othello.SearchType;
+import static edu.upc.epsevg.prop.othello.players.hellouda.PlayerMiniMax.heuristica;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Random;
@@ -22,22 +23,16 @@ public class PlayerID implements IPlayer, IAuto {
     private CellType myType;
     private int EDGE_BONUS = 5;
     private CellType hisType;
-    private int[][] stabilityTable = {
-        {4,  -3,  2,  2,  2,  2, -3,  4,},
-        {-3, -4, -1, -1, -1, -1, -4, -3,},
-        {2,  -1,  1,  0,  0,  1, -1,  2,},
-        {2,  -1,  0,  1,  1,  0, -1,  2,},
-        {2,  -1,  0,  1,  1,  0, -1,  2,},
-        {2,  -1,  1,  0,  0,  1, -1,  2,},
-        {-3, -4, -1, -1, -1, -1, -4, -3,},
-        {4,  -3,  2,  2,  2,  2, -3,  4}
-    };
     private long[][][] zobrist = new long[8][8][2];
     private infoNode[] taulaTransposicio = new infoNode[100];
+    private boolean timeOut = false;
+    private int maxDepth;
+    MyGameStatus myGameStatus;
 
     public PlayerID(String name) {
         this.name = name;
-        
+        this.maxDepth = 0;
+
         // Creem un objecte Random
         Random random = new Random();
         // Inicialitzem la matriu amb valors aleatoris
@@ -64,16 +59,31 @@ public class PlayerID implements IPlayer, IAuto {
         return hash;
     }
     
-    public class infoNode{
+    private class infoNode{
         byte indexMillorFill;
         //  num1(0=buit, 1=plena), num2(0=negra, 1=blanca)
         long num1, num2;
 
         public infoNode(byte indexMillorFill) {
             this.indexMillorFill = indexMillorFill;
-            //this.num1 = GameStatus.board_occupied.toLongArray()[0];
-            //this.num2 = GameStatus.board_color.toLongArray()[0];;
+            this.num1 = myGameStatus.getBoard_occupied().toLongArray()[0];
+            this.num2 = myGameStatus.getBoard_color().toLongArray()[0];
         }
+    }
+    
+    private class MyPair{
+        Point mov;
+        int heuristica;
+
+        public MyPair(Point mov, int heuristica) {
+            this.mov = mov;
+            this.heuristica = heuristica;
+        }
+    }
+    
+    @Override
+    public String getName() {
+        return "Hellowda(" + name + ")";
     }
 
     /**
@@ -81,13 +91,10 @@ public class PlayerID implements IPlayer, IAuto {
      * de joc.
      */
     @Override
-    public String getName() {
-        return "Hellowda(" + name + ")";
-    }
-
-    @Override
     public void timeout() {
         // Nothing to do! I'm so fast, I never timeout 8-)
+        System.out.println("TIME OUT -> tallem la cerca ");
+        timeOut = true;
     }
     
     /**
@@ -100,20 +107,32 @@ public class PlayerID implements IPlayer, IAuto {
     @Override
     public Move move(GameStatus s) {
         ContaNodes = 0;
+        myGameStatus = new MyGameStatus(s);
         myType = s.getCurrentPlayer();
         hisType = CellType.opposite(myType);
-        Point mov = triaPosició(s, 8);
-        return new Move( mov, this.ContaNodes, 0, SearchType.MINIMAX);
+        maxDepth = 0;
+        timeOut = false;
+        int prof=1;
+        MyPair millorMov = new MyPair(new Point(), 0);
+        while(!timeOut){
+            MyPair mov = triaPosició(myGameStatus, prof);
+            if(mov.heuristica>millorMov.heuristica){
+                millorMov=mov;
+            }
+            prof++;
+        }
+        
+        return new Move(millorMov.mov, this.ContaNodes, prof, SearchType.MINIMAX_IDS);
         //return move (posicio, 0, 0, MINIMAX)
     }
     
-    Point triaPosició(GameStatus s, int depth){
+    MyPair triaPosició(MyGameStatus s, int depth){
 
         int maxEval = Integer.MIN_VALUE;
         Point bestMove = new Point();
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
-            GameStatus fill = new GameStatus(s);
+            MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
             int eval = minValor(fill, depth-1, Integer.MAX_VALUE, Integer.MIN_VALUE);
             if(maxEval < eval){
@@ -121,10 +140,13 @@ public class PlayerID implements IPlayer, IAuto {
                 bestMove = moves.get(i);
             }
         }
-        return bestMove;
+        return new MyPair(bestMove, maxEval);
     }
 
-    int minValor(GameStatus s, int depth, int beta, int alpha){
+    int minValor(MyGameStatus s, int depth, int beta, int alpha){
+        if(timeOut){
+            return -1;
+        }
         //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
@@ -138,7 +160,7 @@ public class PlayerID implements IPlayer, IAuto {
         int minEval = Integer.MAX_VALUE;
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
-            GameStatus fill = new GameStatus(s);
+            MyGameStatus fill = new MyGameStatus(s);
             //System.out.println(fill.getCurrentPlayer()); 
             fill.movePiece(moves.get(i));
              
@@ -152,7 +174,10 @@ public class PlayerID implements IPlayer, IAuto {
            return minEval;
     }
 
-    int maxValor(GameStatus s, int depth, int beta, int alpha){
+    int maxValor(MyGameStatus s, int depth, int beta, int alpha){
+        if(timeOut){
+            return -1;
+        }
         //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
@@ -166,7 +191,7 @@ public class PlayerID implements IPlayer, IAuto {
         int maxEval = Integer.MIN_VALUE+1;
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
-            GameStatus fill = new GameStatus(s);
+            MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
             maxEval = Math.max(maxEval, minValor(fill, depth-1, beta, alpha));
             alpha = Math.max(alpha, maxEval);
@@ -179,7 +204,7 @@ public class PlayerID implements IPlayer, IAuto {
     }
 
         
-   public int  paritat(GameStatus s, CellType player){
+   public int  paritat(MyGameStatus s, CellType player){
        int par1 = s.getScore(player);
        int par2 = s.getScore((CellType.opposite(player)));
        
@@ -194,7 +219,7 @@ public class PlayerID implements IPlayer, IAuto {
        }
    }
    
-   public int corner (GameStatus s, CellType player){
+   public int corner (MyGameStatus s, CellType player){
        int myTiles = 0;
        int oppTiles = 0;
             if (s.getPos(0,0) == player) {
@@ -227,7 +252,7 @@ public class PlayerID implements IPlayer, IAuto {
    
 
         
-    public static int heuristica(GameStatus s, CellType player) {
+    public static int heuristica(MyGameStatus s, CellType player) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
         double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
 
