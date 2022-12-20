@@ -24,7 +24,8 @@ public class PlayerID implements IPlayer, IAuto {
     private int EDGE_BONUS = 5;
     private CellType hisType;
     private long[][][] zobrist = new long[8][8][2];
-    private infoNode[] taulaTransposicio = new infoNode[100];
+    private long N = 1000000000;
+    private InfoNode[] tTransp = new InfoNode[(int)N];
     private boolean timeOut = false;
     private int maxDepth;
     MyGameStatus myGameStatus;
@@ -56,19 +57,7 @@ public class PlayerID implements IPlayer, IAuto {
                 }
             }
         }
-        return hash;
-    }
-    
-    private class infoNode{
-        byte indexMillorFill;
-        //  num1(0=buit, 1=plena), num2(0=negra, 1=blanca)
-        long num1, num2;
-
-        public infoNode(byte indexMillorFill) {
-            this.indexMillorFill = indexMillorFill;
-            this.num1 = myGameStatus.getBoard_occupied().toLongArray()[0];
-            this.num2 = myGameStatus.getBoard_color().toLongArray()[0];
-        }
+        return Math.abs(hash);
     }
     
     private class MyPair{
@@ -108,7 +97,7 @@ public class PlayerID implements IPlayer, IAuto {
     public Move move(GameStatus s) {
         ContaNodes = 0;
         myGameStatus = new MyGameStatus(s);
-        myType = s.getCurrentPlayer();
+        myType = myGameStatus.getCurrentPlayer();
         hisType = CellType.opposite(myType);
         maxDepth = 0;
         timeOut = false;
@@ -128,16 +117,36 @@ public class PlayerID implements IPlayer, IAuto {
     
     MyPair triaPosició(MyGameStatus s, int depth){
 
+        boolean reorder = false;
+        
+        long hash = getHash(myGameStatus);
+        System.out.println("HH: " + (int)(hash % N));
+        InfoNode storedResult = tTransp[(int)(hash % N)];
+        if (storedResult != null && storedResult.num1 == myGameStatus.getBoard_occupied().toLongArray()[0]
+        && storedResult.num2 == myGameStatus.getBoard_color().toLongArray()[0]
+        && storedResult.indexMillorFill != -1 && depth <= storedResult.indexMillorFill) {
+            reorder = true;
+            //Point bestMoveStored = s.getMoves().get(storedResult.indexMillorFill);
+            //return new MyPair(bestMoveStored, 0);
+        }
+        
         int maxEval = Integer.MIN_VALUE;
         Point bestMove = new Point();
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
+            if(reorder){
+                i = storedResult.indexMillorFill;
+            }
             MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
             int eval = minValor(fill, depth-1, Integer.MAX_VALUE, Integer.MIN_VALUE);
             if(maxEval < eval){
                 maxEval = eval;
                 bestMove = moves.get(i);
+            }
+            if(reorder){
+                i = 0;
+                reorder = false;
             }
         }
         return new MyPair(bestMove, maxEval);
@@ -202,56 +211,7 @@ public class PlayerID implements IPlayer, IAuto {
         
         return maxEval;
     }
-
-        
-   public int  paritat(MyGameStatus s, CellType player){
-       int par1 = s.getScore(player);
-       int par2 = s.getScore((CellType.opposite(player)));
-       
-       if(par1>par2){
-           return 100*((par1)/(par1 + par2));
-       }
-       else if(par1<par2){
-           return 100*((par2)/(par1 + par2));
-       }
-       else{
-           return 0;
-       }
-   }
-   
-   public int corner (MyGameStatus s, CellType player){
-       int myTiles = 0;
-       int oppTiles = 0;
-            if (s.getPos(0,0) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(0,0) == (CellType.opposite(player))) {
-                oppTiles += 1;
-            }
-            if (s.getPos(0,s.getSize()-1) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(0,s.getSize()-1) == (CellType.opposite(player))) {
-                oppTiles += 1;
-            }
-            if (s.getPos(s.getSize()-1,0) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(s.getSize()-1,0) == (CellType.opposite(player))) {
-                oppTiles += 1;
-            }
-            if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(s.getSize()-1, s.getSize()-1) == (CellType.opposite(player))) {
-                oppTiles += 1;
-            }
-            
-            return (myTiles-oppTiles);
-        }
-   
-
-        
+    
     public static int heuristica(MyGameStatus s, CellType player) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
         double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
@@ -413,7 +373,7 @@ public class PlayerID implements IPlayer, IAuto {
         l = -12.5 * (myTiles - oppTiles);
         
         // Mobility
-        myTiles = oppTiles = 0;
+        /*myTiles = oppTiles = 0;
         for (int i = 0; i < s.getSize(); i++) {
             for (int j = 0; j < s.getSize(); j++) {
                 if (!(s.getPos(0,0) == CellType.EMPTY)) {
@@ -445,18 +405,17 @@ public class PlayerID implements IPlayer, IAuto {
                     }
                 }
             }
-            }
-            if (myTiles > oppTiles) {
-                m = (100.0 * myTiles) / (myTiles + oppTiles);
-            } else if (myTiles < oppTiles) {
-                m = -(100.0 * oppTiles) / (myTiles + oppTiles);
-            } else {
-                m = 0;
-            }
-            // Final weighted score
-            int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
-            
-            return ret ;
-           }
+        }
+        if (myTiles > oppTiles) {
+            m = (100.0 * myTiles) / (myTiles + oppTiles);
+        } else if (myTiles < oppTiles) {
+            m = -(100.0 * oppTiles) / (myTiles + oppTiles);
+        } else {
+            m = 0;
+        }*/
+        // Final weighted score
+        int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
+        return ret ;
+    }
 }
 
