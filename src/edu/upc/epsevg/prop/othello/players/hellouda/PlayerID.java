@@ -18,7 +18,7 @@ import java.util.ArrayList;
  * @author bernat
  */
 public class PlayerID implements IPlayer, IAuto {
-    private int ContaNodes;
+    private int cntNodes;
     private String name;
     private CellType myType;
     private int EDGE_BONUS = 5;
@@ -28,7 +28,6 @@ public class PlayerID implements IPlayer, IAuto {
     private InfoNode[] tTransp = new InfoNode[(int)N];
     private boolean timeOut = false;
     private int maxDepth;
-    MyGameStatus myGameStatus;
 
     public PlayerID(String name) {
         this.name = name;
@@ -61,11 +60,11 @@ public class PlayerID implements IPlayer, IAuto {
     }
     
     private class MyPair{
-        Point mov;
+        Point position;
         int heuristica;
 
         public MyPair(Point mov, int heuristica) {
-            this.mov = mov;
+            this.position = mov;
             this.heuristica = heuristica;
         }
     }
@@ -95,47 +94,52 @@ public class PlayerID implements IPlayer, IAuto {
      */
     @Override
     public Move move(GameStatus s) {
-        ContaNodes = 0;
-        myGameStatus = new MyGameStatus(s);
+        MyGameStatus myGameStatus = new MyGameStatus(s);
         myType = myGameStatus.getCurrentPlayer();
         hisType = CellType.opposite(myType);
+        
+        cntNodes = 0;
         maxDepth = 0;
         timeOut = false;
-        int prof=1;
+        
         MyPair millorMov = new MyPair(new Point(), 0);
+        int profIDS=1;
         while(!timeOut){
-            MyPair mov = triaPosició(myGameStatus, prof);
-            if(mov.heuristica>millorMov.heuristica){
+            MyPair mov = triaPosició(myGameStatus, profIDS);
+            if(mov.heuristica > millorMov.heuristica){
                 millorMov=mov;
             }
-            prof++;
+            profIDS++;
         }
         
-        return new Move(millorMov.mov, this.ContaNodes, prof, SearchType.MINIMAX_IDS);
-        //return move (posicio, 0, 0, MINIMAX)
+        return new Move(millorMov.position, cntNodes, profIDS, SearchType.MINIMAX_IDS);
     }
     
     MyPair triaPosició(MyGameStatus s, int depth){
 
         boolean reorder = false;
         
-        long hash = getHash(myGameStatus);
+        long hash = getHash(s);
         System.out.println("HH: " + (int)(hash % N));
         InfoNode storedResult = tTransp[(int)(hash % N)];
-        if (storedResult != null && storedResult.num1 == myGameStatus.getBoard_occupied().toLongArray()[0]
-        && storedResult.num2 == myGameStatus.getBoard_color().toLongArray()[0]
-        && storedResult.indexMillorFill != -1 && depth <= storedResult.indexMillorFill) {
+        if (storedResult != null && storedResult.num1 == s.getBoard_occupied().toLongArray()[0]
+        && storedResult.num2 == s.getBoard_color().toLongArray()[0]
+        && storedResult.indexMillorFill != -1/* && depth <= storedResult.indexMillorFill*/) {
             reorder = true;
             //Point bestMoveStored = s.getMoves().get(storedResult.indexMillorFill);
             //return new MyPair(bestMoveStored, 0);
         }
         
+        boolean visited = false;
         int maxEval = Integer.MIN_VALUE;
         Point bestMove = new Point();
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
             if(reorder){
                 i = storedResult.indexMillorFill;
+            }
+            if(visited && i == storedResult.indexMillorFill){
+                continue;
             }
             MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
@@ -147,6 +151,7 @@ public class PlayerID implements IPlayer, IAuto {
             if(reorder){
                 i = 0;
                 reorder = false;
+                visited = true;
             }
         }
         return new MyPair(bestMove, maxEval);
@@ -373,7 +378,7 @@ public class PlayerID implements IPlayer, IAuto {
         l = -12.5 * (myTiles - oppTiles);
         
         // Mobility
-        /*myTiles = oppTiles = 0;
+        myTiles = oppTiles = 0;
         for (int i = 0; i < s.getSize(); i++) {
             for (int j = 0; j < s.getSize(); j++) {
                 if (!(s.getPos(0,0) == CellType.EMPTY)) {
@@ -412,7 +417,7 @@ public class PlayerID implements IPlayer, IAuto {
             m = -(100.0 * oppTiles) / (myTiles + oppTiles);
         } else {
             m = 0;
-        }*/
+        }
         // Final weighted score
         int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
         return ret ;
