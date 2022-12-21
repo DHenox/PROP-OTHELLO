@@ -21,7 +21,6 @@ public class PlayerID implements IPlayer, IAuto {
     private int cntNodes;
     private String name;
     private CellType myType;
-    private int EDGE_BONUS = 5;
     private CellType hisType;
     private long[][][] zobrist = new long[8][8][2];
     private long N = 1000000000;
@@ -32,7 +31,6 @@ public class PlayerID implements IPlayer, IAuto {
     public PlayerID(String name) {
         this.name = name;
         this.maxDepth = 0;
-
         // Creem un objecte Random
         Random random = new Random();
         // Inicialitzem la matriu amb valors aleatoris
@@ -120,26 +118,27 @@ public class PlayerID implements IPlayer, IAuto {
         boolean reorder = false;
         
         long hash = getHash(s);
-        System.out.println("HH: " + (int)(hash % N));
+        //System.out.println("Hash: " + (int)(hash % N));
         InfoNode storedResult = tTransp[(int)(hash % N)];
-        if (storedResult != null && storedResult.num1 == s.getBoard_occupied().toLongArray()[0]
-        && storedResult.num2 == s.getBoard_color().toLongArray()[0]
-        && storedResult.indexMillorFill != -1/* && depth <= storedResult.indexMillorFill*/) {
-            reorder = true;
-            //Point bestMoveStored = s.getMoves().get(storedResult.indexMillorFill);
-            //return new MyPair(bestMoveStored, 0);
+        if(storedResult != null){
+            System.out.println("No es null");
+            //if(storedResult.num1 == s.getBoard_occupied().toLongArray()[0]){
+                //System.out.println("num1 igual");
+                //if(storedResult.num2 == s.getBoard_color().toLongArray()[0]){
+                    System.out.println("num2 igual");
+                    reorder = true;
+                //}
+            //}
         }
         
-        boolean visited = false;
         int maxEval = Integer.MIN_VALUE;
+        int bestIndex = -1;
+        MyGameStatus bestFill = new MyGameStatus(s);
         Point bestMove = new Point();
         ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
             if(reorder){
                 i = storedResult.indexMillorFill;
-            }
-            if(visited && i == storedResult.indexMillorFill){
-                continue;
             }
             MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
@@ -147,13 +146,17 @@ public class PlayerID implements IPlayer, IAuto {
             if(maxEval < eval){
                 maxEval = eval;
                 bestMove = moves.get(i);
+                
+                bestIndex = i;
+                bestFill = fill;
             }
             if(reorder){
                 i = 0;
                 reorder = false;
-                visited = true;
             }
         }
+        //System.out.println("Best Index: " + bestIndex);
+        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndex, bestFill);
         return new MyPair(bestMove, maxEval);
     }
 
@@ -185,7 +188,7 @@ public class PlayerID implements IPlayer, IAuto {
                 }
             
         }
-           return minEval;
+        return minEval;
     }
 
     int maxValor(MyGameStatus s, int depth, int beta, int alpha){
