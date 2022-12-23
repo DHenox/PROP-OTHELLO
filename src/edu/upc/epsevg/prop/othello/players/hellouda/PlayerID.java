@@ -34,7 +34,7 @@ public class PlayerID implements IPlayer, IAuto {
         timeOut = false;
         cntPodes = 0;
         zobrist = new long[8][8][2];
-        N = 59652323; //2 gb = 119304599 -- 1 gb = 
+        N = 59652323; //2 gb = 119304599 -- 1 gb = 59652323
         tTransp = new InfoNode[(int)N];
         // Creem un objecte Random
         Random random = new Random();
@@ -108,7 +108,7 @@ public class PlayerID implements IPlayer, IAuto {
         MyPair millorMov = new MyPair(new Point(), Integer.MIN_VALUE);
         int profIDS=1;
         while(!timeOut){
-            MyPair mov = triaPosició(myGameStatus, profIDS, Integer.MAX_VALUE, Integer.MIN_VALUE);
+            MyPair mov = triaPosició(myGameStatus, profIDS);
             if(mov.heuristica > millorMov.heuristica){
                 millorMov=mov;
             }
@@ -118,7 +118,7 @@ public class PlayerID implements IPlayer, IAuto {
         return new Move(millorMov.position, cntNodes, profIDS, SearchType.MINIMAX_IDS);
     }
     
-    MyPair triaPosició(MyGameStatus s, int depth, int alpha, int beta){
+    MyPair triaPosició(MyGameStatus s, int depth){
         if(timeOut){
             return new MyPair(new Point(), Integer.MIN_VALUE);
         }
@@ -147,31 +147,22 @@ public class PlayerID implements IPlayer, IAuto {
             }
             MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
-            int eval = minValor(fill, depth-1, alpha, beta);
+            int eval = minValor(fill, depth-1, Integer.MIN_VALUE, Integer.MAX_VALUE);
             if(maxEval < eval){
                 maxEval = eval;
                 bestMove = moves.get(i);
-                bestIndexToStore = i;
-            }
-            if(alpha < maxEval){
-                alpha = maxEval;
                 bestIndexToStore = i;
             }
             if(bestIndexStored != -1 && !bestVisited){
                 i = 0;
                 bestVisited = true;
             }
-            if(alpha>=beta){
-                ++cntPodes;
-                exact = false;
-                break;
-            }
         }
         tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, maxEval, exact, s);
         return new MyPair(bestMove, maxEval);
     }
 
-    int minValor(MyGameStatus s, int depth, int beta, int alpha){
+    int minValor(MyGameStatus s, int depth, int alpha, int beta){
         ++cntNodes;
         if(timeOut){
             return Integer.MAX_VALUE;
@@ -219,7 +210,7 @@ public class PlayerID implements IPlayer, IAuto {
             MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
             
-            minEval = Math.min(minEval, maxValor(fill, depth-1, beta, alpha));
+            minEval = Math.min(minEval, maxValor(fill, depth-1, alpha, beta));
             //beta = Math.min(beta, minEval);
             if(beta > minEval){
                 beta = minEval;
@@ -239,7 +230,7 @@ public class PlayerID implements IPlayer, IAuto {
         return minEval;
     }
 
-    int maxValor(MyGameStatus s, int depth, int beta, int alpha){
+    int maxValor(MyGameStatus s, int depth, int alpha, int beta){
         ++cntNodes;
         if(timeOut){
             return Integer.MIN_VALUE;
@@ -286,7 +277,7 @@ public class PlayerID implements IPlayer, IAuto {
             
             MyGameStatus fill = new MyGameStatus(s);
             fill.movePiece(moves.get(i));
-            maxEval = Math.max(maxEval, minValor(fill, depth-1, beta, alpha));
+            maxEval = Math.max(maxEval, minValor(fill, depth-1, alpha, beta));
             //alpha = Math.max(alpha, maxEval);
             if(alpha < maxEval){
                 alpha = maxEval;
@@ -306,7 +297,7 @@ public class PlayerID implements IPlayer, IAuto {
         return maxEval;
     }
     
-    public int heuristica(MyGameStatus s/*, CellType player*/) {
+    public int heuristica(MyGameStatus s) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
         double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
 
@@ -349,11 +340,13 @@ public class PlayerID implements IPlayer, IAuto {
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
-                            if (s.getPos(i,j) == player)  myFrontTiles++;
+                            if (s.getPos(i,j) == player){
+                                myFrontTiles++;
+                            }
                         } else {
                             oppFrontTiles++;
                         }
-                        
+                        break;
                     }
                 }
             }
@@ -501,7 +494,7 @@ public class PlayerID implements IPlayer, IAuto {
                             if (myTiles < 64) {
                                 myTiles++;
                             }
-                           
+                           break;
                         }
                     }
                 }
@@ -526,7 +519,7 @@ public class PlayerID implements IPlayer, IAuto {
                             if (oppTiles < 64) {
                                 oppTiles++;
                             }
-                            
+                            break;
                         }
                     }
                 }
