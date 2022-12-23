@@ -140,7 +140,7 @@ public class PlayerID implements IPlayer, IAuto {
         boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
             if(timeOut){
-                return new MyPair(new Point(), 0);
+                return new MyPair(new Point(), Integer.MIN_VALUE);
             }
             if(bestIndexStored != -1 && !bestVisited){
                 i = bestIndexStored;
@@ -202,7 +202,7 @@ public class PlayerID implements IPlayer, IAuto {
         boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
             if(timeOut){
-                return 0;
+                return Integer.MAX_VALUE;
             }
             if(bestIndexStored != -1 && !bestVisited){
                 i = bestIndexStored;
@@ -269,7 +269,7 @@ public class PlayerID implements IPlayer, IAuto {
         boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
             if(timeOut){
-                return 0;
+                return Integer.MIN_VALUE;
             }
             if(bestIndexStored != -1 && !bestVisited){
                 i = bestIndexStored;
@@ -299,7 +299,7 @@ public class PlayerID implements IPlayer, IAuto {
     
     public int heuristica(MyGameStatus s) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
-        double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
+        double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0, z = 0;
 
         CellType player = myType;
         int[] X1 = {-1, -1, 0, 1, 1, 1, 0, -1};
@@ -318,13 +318,7 @@ public class PlayerID implements IPlayer, IAuto {
 
         // Piece difference, frontier disks and disk squares
         for (int i = 0; i < s.getSize(); i++) {
-            if(timeOut){
-                return 0;
-            }
             for (int j = 0; j < s.getSize(); j++) {
-                if(timeOut){
-                    return 0;
-                }
                 if (s.getPos(i,j) == player) {
                     d += V[i][j];
                     myTiles++;
@@ -334,9 +328,6 @@ public class PlayerID implements IPlayer, IAuto {
                 }
                 if (s.getPos(i,j) == opponent || s.getPos(i,j) == player) {
                     for (int k = 0; k < 8; k++) {
-                        if(timeOut){
-                            return 0;
-                        }
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
@@ -371,123 +362,172 @@ public class PlayerID implements IPlayer, IAuto {
         // Corner occupancy
         myTiles = oppTiles = 0;
         if (s.getPos(0,0) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(0,0) == (opponent)) {
-                oppTiles += 1;
-            }
-            if (s.getPos(0,s.getSize()-1) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(0,s.getSize()-1) == (opponent)) {
-                oppTiles += 1;
-            }
-            if (s.getPos(s.getSize()-1,0) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(s.getSize()-1,0) == (opponent)) {
-                oppTiles += 1;
-            }
-            if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
-                myTiles += 1;
-            }
-            else if (s.getPos(s.getSize()-1, s.getSize()-1) == (opponent)) {
-                oppTiles += 1;
-            }
+            myTiles += 1;
+        }
+        else if (s.getPos(0,0) == (opponent)) {
+            oppTiles += 1;
+        }
+        if (s.getPos(0,s.getSize()-1) == player) {
+            myTiles += 1;
+        }
+        else if (s.getPos(0,s.getSize()-1) == (opponent)) {
+            oppTiles += 1;
+        }
+        if (s.getPos(s.getSize()-1,0) == player) {
+            myTiles += 1;
+        }
+        else if (s.getPos(s.getSize()-1,0) == (opponent)) {
+            oppTiles += 1;
+        }
+        if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
+            myTiles += 1;
+        }
+        else if (s.getPos(s.getSize()-1, s.getSize()-1) == (opponent)) {
+            oppTiles += 1;
+        }
             
         c = 25 * (myTiles - oppTiles);
         
-        if(timeOut){
-            return 0;
-        }
-        
         // Corner closeness
         myTiles = oppTiles = 0;
+        //  0=empty, 1=nosaltres 2=contrincant
+        boolean closenessState = false;
         if ((s.getPos(0,0) == CellType.EMPTY)) {
-            if (s.getPos(0,1) == player) {
-                myTiles++;
-            } else if (s.getPos(0,1) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(1,1) == player) {
-                myTiles++;
-            } else if (s.getPos(1,1) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(1,0) == player) {
-                myTiles++;
-            } else if (s.getPos(1,0) == opponent) {
-                oppTiles++;
-            }
+            closenessState = false;
         }
+        else{
+            closenessState = true;
+        }
+        
+        if (s.getPos(0,1) == player) {
+            myTiles++;
+        } else if (s.getPos(0,1) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(1,1) == player) {
+            myTiles++;
+        } else if (s.getPos(1,1) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(1,0) == player) {
+            myTiles++;
+        } else if (s.getPos(1,0) == opponent) {
+            oppTiles++;
+        }
+        if(!closenessState){
+            l += -12.5 * (myTiles - oppTiles);
+        }
+        else{
+            z += 33 * (myTiles - oppTiles);
+        }
+        myTiles = 0;
+        oppTiles = 0;
+        
+        
+        //  0=empty, 1=nosaltres 2=contrincant
+        closenessState = false;
         if ((s.getPos(0,s.getSize()-1) == CellType.EMPTY)) {
-            if (s.getPos(0,6) == player) {
-                myTiles++;
-            } else if (s.getPos(0,6) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(1,6) == player) {
-                myTiles++;
-            } else if (s.getPos(1,6) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(1,s.getSize()-1) == player) {
-                myTiles++;
-            } else if (s.getPos(1,s.getSize()-1) == opponent) {
-                oppTiles++;
-            }
+            closenessState = false;
         }
+        else{
+            closenessState = true;
+        }
+        if (s.getPos(0,6) == player) {
+            myTiles++;
+        } else if (s.getPos(0,6) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(1,6) == player) {
+            myTiles++;
+        } else if (s.getPos(1,6) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(1,s.getSize()-1) == player) {
+            myTiles++;
+        } else if (s.getPos(1,s.getSize()-1) == opponent) {
+            oppTiles++;
+        }
+        if(!closenessState){
+            l += -12.5 * (myTiles - oppTiles);
+        }
+        else{
+            z += 33 * (myTiles - oppTiles);
+        }
+        myTiles = 0;
+        oppTiles = 0;
+        
+        
+        //  0=empty, 1=nosaltres 2=contrincant
+        closenessState = false;
         if ((s.getPos(s.getSize()-1,0) == CellType.EMPTY)) {
-            if (s.getPos(s.getSize()-1,1) == player) {
-                myTiles++;
-            } else if (s.getPos(s.getSize()-1,1) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(6,1) == player) {
-                myTiles++;
-            } else if (s.getPos(6,1) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(6,0) == player) {
-                myTiles++;
-            } else if (s.getPos(6,0) == opponent) {
-                oppTiles++;
-            }
+            closenessState = false;
         }
+        else{
+            closenessState = true;
+        }
+        if (s.getPos(s.getSize()-1,1) == player) {
+            myTiles++;
+        } else if (s.getPos(s.getSize()-1,1) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(6,1) == player) {
+            myTiles++;
+        } else if (s.getPos(6,1) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(6,0) == player) {
+            myTiles++;
+        } else if (s.getPos(6,0) == opponent) {
+            oppTiles++;
+        }
+        if(!closenessState){
+            l += -12.5 * (myTiles - oppTiles);
+        }
+        else{
+            z += 33 * (myTiles - oppTiles);
+        }
+        myTiles = 0;
+        oppTiles = 0;
+        
+        
+        //  0=empty, 1=nosaltres 2=contrincant
+        closenessState = false;
         if ((s.getPos(s.getSize()-1,s.getSize()-1) == CellType.EMPTY)) {
-            if (s.getPos(6,s.getSize()-1) == player) {
-                myTiles++;
-            } else if (s.getPos(6,s.getSize()-1) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(6,6) == player) {
-                myTiles++;
-            } else if (s.getPos(6,6) == opponent) {
-                oppTiles++;
-            }
-            if (s.getPos(s.getSize()-1,6) == player) {
-                myTiles++;
-            } else if (s.getPos(s.getSize()-1,6) == opponent) {
-                oppTiles++;
-            }
+            closenessState = false;
         }
-        l = -12.5 * (myTiles - oppTiles);
+        else{
+            closenessState = true;
+        }
+        if (s.getPos(6,s.getSize()-1) == player) {
+            myTiles++;
+        } else if (s.getPos(6,s.getSize()-1) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(6,6) == player) {
+            myTiles++;
+        } else if (s.getPos(6,6) == opponent) {
+            oppTiles++;
+        }
+        if (s.getPos(s.getSize()-1,6) == player) {
+            myTiles++;
+        } else if (s.getPos(s.getSize()-1,6) == opponent) {
+            oppTiles++;
+        }
+        if(!closenessState){
+            l += -12.5 * (myTiles - oppTiles);
+        }
+        else{
+            z += 33 * (myTiles - oppTiles);
+        }
+        myTiles = 0;
+        oppTiles = 0;
         
         // Mobility
         myTiles = oppTiles = 0;
         for (int i = 0; i < s.getSize(); i++) {
-            if(timeOut){
-                return 0;
-            }
             for (int j = 0; j < s.getSize(); j++) {
-                if(timeOut){
-                    return 0;
-                }
                 if (!(s.getPos(0,0) == CellType.EMPTY)) {
                     for (int k = 0; k < s.getSize(); k++) {
-                        if(timeOut){
-                            return 0;
-                        }
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == opponent) {
@@ -501,18 +541,9 @@ public class PlayerID implements IPlayer, IAuto {
             }
         }
         for (int i = 0; i < s.getSize(); i++) {
-            if(timeOut){
-                return 0;
-            }
             for (int j = 0; j < s.getSize(); j++) {
-                if(timeOut){
-                    return 0;
-                }
                 if (!(s.getPos(0,0) == CellType.EMPTY)) {
                     for (int k = 0; k < s.getSize(); k++) {
-                        if(timeOut){
-                            return 0;
-                        }
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == player) {
@@ -533,7 +564,7 @@ public class PlayerID implements IPlayer, IAuto {
             m = 0;
         }
         // Final weighted score
-        int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
+        int ret = (int) ((10 * p + 801 * c + 282 * l + 78 * m + 74 * f + 10 * d + 700 *z));
         return ret ;
     }
 }
