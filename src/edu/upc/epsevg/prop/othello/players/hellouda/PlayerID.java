@@ -34,7 +34,7 @@ public class PlayerID implements IPlayer, IAuto {
         timeOut = false;
         cntPodes = 0;
         zobrist = new long[8][8][2];
-        N = 987124133;
+        N = 59652323; //2 gb = 119304599 -- 1 gb = 
         tTransp = new InfoNode[(int)N];
         // Creem un objecte Random
         Random random = new Random();
@@ -353,7 +353,7 @@ public class PlayerID implements IPlayer, IAuto {
                         } else {
                             oppFrontTiles++;
                         }
-                        break;
+                        
                     }
                 }
             }
@@ -501,7 +501,7 @@ public class PlayerID implements IPlayer, IAuto {
                             if (myTiles < 64) {
                                 myTiles++;
                             }
-                            break;
+                           
                         }
                     }
                 }
@@ -526,7 +526,7 @@ public class PlayerID implements IPlayer, IAuto {
                             if (oppTiles < 64) {
                                 oppTiles++;
                             }
-                            break;
+                            
                         }
                     }
                 }

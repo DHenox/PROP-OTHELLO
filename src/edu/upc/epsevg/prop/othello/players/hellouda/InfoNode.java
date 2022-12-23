@@ -9,6 +9,7 @@ package edu.upc.epsevg.prop.othello.players.hellouda;
  * @author HENOK
  */
 public class InfoNode {
+    //144 bits, 18 bytes -> 18 bytes * 2147483647
     byte indexMillorFill;
     //  num1(0=buit, 1=plena), num2(0=negra, 1=blanca)
     long num1, num2;
