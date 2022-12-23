@@ -8,60 +8,28 @@ import edu.upc.epsevg.prop.othello.IPlayer;
 import edu.upc.epsevg.prop.othello.Move;
 import edu.upc.epsevg.prop.othello.SearchType;
 import java.awt.Point;
-import java.util.Random;
 import java.util.ArrayList; 
 
 /**
  * Jugador aleatori
  * @author bernat
  */
-public class PlayerID implements IPlayer, IAuto {
-    private String playerName;
+public class PlayerID2 implements IPlayer, IAuto {
+    private String name;
+    private GameStatus s;
     private CellType myType;
     private CellType hisType;
-    private int cntNodes;
-    private int maxDepth;
-    private long[][][] zobrist;
-    private long N;
-    private InfoNode[] tTransp;
     private boolean timeOut;
+    private int cntNodes;
     private int cntPodes;
 
-    public PlayerID(String name) {
-        playerName = name;
-        cntNodes = 0;
-        maxDepth = 0;
-        timeOut = false;
-        cntPodes = 0;
-        zobrist = new long[8][8][2];
-        N = 987124133;
-        tTransp = new InfoNode[(int)N];
-        // Creem un objecte Random
-        Random random = new Random();
-        // Inicialitzem la matriu amb valors aleatoris
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                for (int k = 0; k < 2; k++) {
-                    zobrist[i][j][k] = random.nextLong();
-                }
-            }
-        }
+    public PlayerID2(String name) {
+        this.name = name;
+        this.timeOut = false;
+        this.cntNodes = 0;
+        this.cntPodes = 0;
     }
-    
-    public long getHash(GameStatus s){
-        long hash  = 0;
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                if(s.getPos(i, j) != CellType.EMPTY){
-                    for (int k = 0; k < 2; k++) {
-                        hash ^= zobrist[i][j][k];
-                    }
-                }
-            }
-        }
-        return Math.abs(hash);
-    }
-    
+
     private class MyPair{
         Point position;
         int heuristica;
@@ -72,9 +40,10 @@ public class PlayerID implements IPlayer, IAuto {
         }
     }
     
+    
     @Override
     public String getName() {
-        return "Hellowda(" + playerName + ")";
+        return "Hellowda(" + name + ")";
     }
 
     /**
@@ -83,7 +52,7 @@ public class PlayerID implements IPlayer, IAuto {
      */
     @Override
     public void timeout() {
-        //System.out.println("TIME OUT -> tallem la cerca ");
+        System.out.println("TIME OUT -> tallem la cerca ");
         timeOut = true;
     }
     
@@ -97,15 +66,14 @@ public class PlayerID implements IPlayer, IAuto {
     @Override
     public Move move(GameStatus s) {
         MyGameStatus myGameStatus = new MyGameStatus(s);
-        myType = myGameStatus.getCurrentPlayer();
+        myType = s.getCurrentPlayer();
         hisType = CellType.opposite(myType);
         
-        cntNodes = 0;
-        maxDepth = 0;
-        cntPodes = 0;
         timeOut = false;
+        cntNodes = 0;
+        cntPodes = 0;
         
-        MyPair millorMov = new MyPair(new Point(), Integer.MIN_VALUE);
+        MyPair millorMov = new MyPair(new Point(), 0);
         int profIDS=1;
         while(!timeOut){
             MyPair mov = triaPosició(myGameStatus, profIDS, Integer.MAX_VALUE, Integer.MIN_VALUE);
@@ -114,199 +82,137 @@ public class PlayerID implements IPlayer, IAuto {
             }
             profIDS++;
         }
-        //System.out.println("nº podes: " + cntPodes);
+        System.out.println("nº podes: " + cntPodes);
         return new Move(millorMov.position, cntNodes, profIDS, SearchType.MINIMAX_IDS);
     }
     
     MyPair triaPosició(MyGameStatus s, int depth, int alpha, int beta){
         if(timeOut){
-            return new MyPair(new Point(), Integer.MIN_VALUE);
+            return new MyPair(new Point(), 0);
         }
-        
-        int bestIndexStored = -1;
-        long hash = getHash(s);
-        InfoNode storedResult = tTransp[(int)(hash%N)];
-        long currentNum1 = s.getBoard_occupied().toLongArray()[0];
-        long currentNum2 = s.getBoard_color().toLongArray()[0];
-        if(storedResult != null && storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
-            bestIndexStored = storedResult.indexMillorFill;
-        }
-        
-        boolean exact = true;
-        int bestIndexToStore = 0;
-        ArrayList<Point> moves = s.getMoves();
+
         int maxEval = Integer.MIN_VALUE;
         Point bestMove = new Point();
-        boolean bestVisited = false;
+        ArrayList<Point> moves = s.getMoves();
         for (int i = 0; i < moves.size(); i++) {
-            if(timeOut){
-                return new MyPair(new Point(), 0);
-            }
-            if(bestIndexStored != -1 && !bestVisited){
-                i = bestIndexStored;
-            }
-            MyGameStatus fill = new MyGameStatus(s);
+            GameStatus fill = new GameStatus(s);
             fill.movePiece(moves.get(i));
             int eval = minValor(fill, depth-1, alpha, beta);
             if(maxEval < eval){
                 maxEval = eval;
                 bestMove = moves.get(i);
-                bestIndexToStore = i;
-            }
-            if(alpha < maxEval){
-                alpha = maxEval;
-                bestIndexToStore = i;
-            }
-            if(bestIndexStored != -1 && !bestVisited){
-                i = 0;
-                bestVisited = true;
-            }
-            if(alpha>=beta){
-                ++cntPodes;
-                exact = false;
-                break;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, maxEval, exact, s);
         return new MyPair(bestMove, maxEval);
     }
 
-    int minValor(MyGameStatus s, int depth, int beta, int alpha){
+    int minValor(GameStatus s, int depth, int beta, int alpha){
         ++cntNodes;
-        if(timeOut){
-            return Integer.MAX_VALUE;
-        }
-
+        //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
-                return Integer.MAX_VALUE;
+                return 1000000;
             else                                    //  Guanya el contrincant
-                return Integer.MIN_VALUE;
+                return -1000000;
         }
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
             return heuristica(s);
         }
-        
-        int bestIndexStored = -1;
-        long hash = getHash(s);
-        InfoNode storedResult = tTransp[(int)(hash%N)];
-        long currentNum1 = s.getBoard_occupied().toLongArray()[0];
-        long currentNum2 = s.getBoard_color().toLongArray()[0];
-        if(storedResult != null && storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
-            if(storedResult.nivellsPerSota >= depth){
-                if(storedResult.isExact == true){
-                    return storedResult.heur;
-                }
-                else if(storedResult.isExact == false){
-                    beta = storedResult.heur;
-                }
-            }
-            bestIndexStored = storedResult.indexMillorFill;
-        }
-        
-        boolean exact = true;
-        int bestIndexToStore = 0;
         int minEval = Integer.MAX_VALUE;
         ArrayList<Point> moves = s.getMoves();
-        boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
-            if(timeOut){
-                return 0;
-            }
-            if(bestIndexStored != -1 && !bestVisited){
-                i = bestIndexStored;
-            }
-            MyGameStatus fill = new MyGameStatus(s);
+            GameStatus fill = new GameStatus(s);
+            //System.out.println(fill.getCurrentPlayer()); 
             fill.movePiece(moves.get(i));
-            
+             
             minEval = Math.min(minEval, maxValor(fill, depth-1, beta, alpha));
-            //beta = Math.min(beta, minEval);
-            if(beta > minEval){
-                beta = minEval;
-                bestIndexToStore = i;
-            }
-            if(bestIndexStored != -1 && !bestVisited){
-                i = 0;
-                bestVisited = true;
-            }
+            beta = Math.min(beta, minEval);
             if(alpha>=beta){
                 ++cntPodes;
-                exact = false;
                 break;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, minEval, exact, s);
         return minEval;
     }
 
-    int maxValor(MyGameStatus s, int depth, int beta, int alpha){
+    int maxValor(GameStatus s, int depth, int beta, int alpha){
         ++cntNodes;
-        if(timeOut){
-            return Integer.MIN_VALUE;
-        }
+        //System.out.println(s.getCurrentPlayer());
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
-                return Integer.MAX_VALUE;
+                return 1000000;
             else                                    //  Guanya el contrincant
-                return Integer.MIN_VALUE;
+                return -1000000;
         }
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
             return heuristica(s);
         }
-        
-        int bestIndexStored = -1;
-        long hash = getHash(s);
-        InfoNode storedResult = tTransp[(int)(hash%N)];
-        long currentNum1 = s.getBoard_occupied().toLongArray()[0];
-        long currentNum2 = s.getBoard_color().toLongArray()[0];
-        if(storedResult != null && storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
-            if(storedResult.nivellsPerSota >= depth){
-                if(storedResult.isExact == true){
-                    return storedResult.heur;
-                }
-                else if(storedResult.isExact == false){
-                    alpha = storedResult.heur;
-                }
-            }
-            bestIndexStored = storedResult.indexMillorFill;
-        }
-        
-        boolean exact = true;
-        int bestIndexToStore = 0;
-        int maxEval = Integer.MIN_VALUE;
+        int maxEval = Integer.MIN_VALUE+1;
         ArrayList<Point> moves = s.getMoves();
-        boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
-            if(timeOut){
-                return 0;
-            }
-            if(bestIndexStored != -1 && !bestVisited){
-                i = bestIndexStored;
-            }
-            
-            MyGameStatus fill = new MyGameStatus(s);
+            GameStatus fill = new GameStatus(s);
             fill.movePiece(moves.get(i));
             maxEval = Math.max(maxEval, minValor(fill, depth-1, beta, alpha));
-            //alpha = Math.max(alpha, maxEval);
-            if(alpha < maxEval){
-                alpha = maxEval;
-                bestIndexToStore = i;
-            }
-            if(bestIndexStored != -1 && !bestVisited){
-                i = 0;
-                bestVisited = true;
-            }
+            alpha = Math.max(alpha, maxEval);
             if(alpha>=beta){
                 ++cntPodes;
-                exact = false;
                 break;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, maxEval, exact, s);
+        
         return maxEval;
     }
-    
-    public int heuristica(MyGameStatus s/*, CellType player*/) {
+
+        
+   public int  paritat(GameStatus s, CellType player){
+       int par1 = s.getScore(player);
+       int par2 = s.getScore((CellType.opposite(player)));
+       
+       if(par1>par2){
+           return 100*((par1)/(par1 + par2));
+       }
+       else if(par1<par2){
+           return 100*((par2)/(par1 + par2));
+       }
+       else{
+           return 0;
+       }
+   }
+   
+   public int corner (GameStatus s, CellType player){
+       int myTiles = 0;
+       int oppTiles = 0;
+            if (s.getPos(0,0) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(0,0) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            if (s.getPos(0,s.getSize()-1) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(0,s.getSize()-1) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            if (s.getPos(s.getSize()-1,0) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(s.getSize()-1,0) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
+                myTiles += 1;
+            }
+            else if (s.getPos(s.getSize()-1, s.getSize()-1) == (CellType.opposite(player))) {
+                oppTiles += 1;
+            }
+            
+            return (myTiles-oppTiles);
+        }
+   
+
+        
+    public int heuristica(GameStatus s) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
         double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
 
@@ -327,13 +233,7 @@ public class PlayerID implements IPlayer, IAuto {
 
         // Piece difference, frontier disks and disk squares
         for (int i = 0; i < s.getSize(); i++) {
-            if(timeOut){
-                return 0;
-            }
             for (int j = 0; j < s.getSize(); j++) {
-                if(timeOut){
-                    return 0;
-                }
                 if (s.getPos(i,j) == player) {
                     d += V[i][j];
                     myTiles++;
@@ -343,9 +243,6 @@ public class PlayerID implements IPlayer, IAuto {
                 }
                 if (s.getPos(i,j) == opponent || s.getPos(i,j) == player) {
                     for (int k = 0; k < 8; k++) {
-                        if(timeOut){
-                            return 0;
-                        }
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
@@ -403,10 +300,6 @@ public class PlayerID implements IPlayer, IAuto {
             }
             
         c = 25 * (myTiles - oppTiles);
-        
-        if(timeOut){
-            return 0;
-        }
         
         // Corner closeness
         myTiles = oppTiles = 0;
@@ -483,18 +376,9 @@ public class PlayerID implements IPlayer, IAuto {
         // Mobility
         myTiles = oppTiles = 0;
         for (int i = 0; i < s.getSize(); i++) {
-            if(timeOut){
-                return 0;
-            }
             for (int j = 0; j < s.getSize(); j++) {
-                if(timeOut){
-                    return 0;
-                }
                 if (!(s.getPos(0,0) == CellType.EMPTY)) {
                     for (int k = 0; k < s.getSize(); k++) {
-                        if(timeOut){
-                            return 0;
-                        }
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == opponent) {
@@ -508,18 +392,9 @@ public class PlayerID implements IPlayer, IAuto {
             }
         }
         for (int i = 0; i < s.getSize(); i++) {
-            if(timeOut){
-                return 0;
-            }
             for (int j = 0; j < s.getSize(); j++) {
-                if(timeOut){
-                    return 0;
-                }
                 if (!(s.getPos(0,0) == CellType.EMPTY)) {
                     for (int k = 0; k < s.getSize(); k++) {
-                        if(timeOut){
-                            return 0;
-                        }
                         int x = i + X1[k];
                         int y = j + Y1[k];
                         if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == player) {
@@ -531,7 +406,7 @@ public class PlayerID implements IPlayer, IAuto {
                     }
                 }
             }
-        }
+            }
         if (myTiles > oppTiles) {
             m = (100.0 * myTiles) / (myTiles + oppTiles);
         } else if (myTiles < oppTiles) {
@@ -541,6 +416,7 @@ public class PlayerID implements IPlayer, IAuto {
         }
         // Final weighted score
         int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
+
         return ret ;
     }
 }

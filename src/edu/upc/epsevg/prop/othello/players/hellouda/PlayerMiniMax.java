@@ -8,8 +8,6 @@ import edu.upc.epsevg.prop.othello.IPlayer;
 import edu.upc.epsevg.prop.othello.Move;
 import edu.upc.epsevg.prop.othello.SearchType;
 import java.awt.Point;
-import java.util.ArrayList;
-import java.util.Random;
 import java.util.ArrayList; 
 
 /**
@@ -21,32 +19,21 @@ public class PlayerMiniMax implements IPlayer, IAuto {
     private String name;
     private GameStatus s;
     private CellType myType;
-    private int EDGE_BONUS = 5;
     private CellType hisType;
-    private int[][] stabilityTable = {
-        {4,  -3,  2,  2,  2,  2, -3,  4,},
-        {-3, -4, -1, -1, -1, -1, -4, -3,},
-        {2,  -1,  1,  0,  0,  1, -1,  2,},
-        {2,  -1,  0,  1,  1,  0, -1,  2,},
-        {2,  -1,  0,  1,  1,  0, -1,  2,},
-        {2,  -1,  1,  0,  0,  1, -1,  2,},
-        {-3, -4, -1, -1, -1, -1, -4, -3,},
-        {4,  -3,  2,  2,  2,  2, -3,  4}
-    };
 
     public PlayerMiniMax(String name) {
         this.name = name;
+    }
+
+    @Override
+    public String getName() {
+        return "Hellowda(" + name + ")";
     }
 
     /**
      * Ens avisa que hem de parar la cerca en curs perquè s'ha exhaurit el temps
      * de joc.
      */
-    @Override
-    public String getName() {
-        return "Hellowda(" + name + ")";
-    }
-
     @Override
     public void timeout() {
         // Nothing to do! I'm so fast, I never timeout 8-)
@@ -95,7 +82,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 return -1000000;
         }
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
-            return heuristica(s, s.getCurrentPlayer());
+            return heuristica(s);
         }
         int minEval = Integer.MAX_VALUE;
         ArrayList<Point> moves = s.getMoves();
@@ -123,7 +110,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 return -1000000;
         }
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
-            return heuristica(s, s.getCurrentPlayer());
+            return heuristica(s);
         }
         int maxEval = Integer.MIN_VALUE+1;
         ArrayList<Point> moves = s.getMoves();
@@ -189,10 +176,11 @@ public class PlayerMiniMax implements IPlayer, IAuto {
    
 
         
-    public static int heuristica(GameStatus s, CellType player) {
+    public int heuristica(GameStatus s) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
         double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0;
 
+        CellType player = myType;
         int[] X1 = {-1, -1, 0, 1, 1, 1, 0, -1};
         int[] Y1 = {0, 1, 1, 1, 0, -1, -1, -1};
         int[][] V = {
@@ -279,7 +267,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
         
         // Corner closeness
         myTiles = oppTiles = 0;
-        if (!(s.getPos(0,0) == CellType.EMPTY)) {
+        if ((s.getPos(0,0) == CellType.EMPTY)) {
             if (s.getPos(0,1) == player) {
                 myTiles++;
             } else if (s.getPos(0,1) == opponent) {
@@ -296,7 +284,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 oppTiles++;
             }
         }
-        if (!(s.getPos(0,s.getSize()-1) == CellType.EMPTY)) {
+        if ((s.getPos(0,s.getSize()-1) == CellType.EMPTY)) {
             if (s.getPos(0,6) == player) {
                 myTiles++;
             } else if (s.getPos(0,6) == opponent) {
@@ -313,7 +301,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 oppTiles++;
             }
         }
-        if (!(s.getPos(s.getSize()-1,0) == CellType.EMPTY)) {
+        if ((s.getPos(s.getSize()-1,0) == CellType.EMPTY)) {
             if (s.getPos(s.getSize()-1,1) == player) {
                 myTiles++;
             } else if (s.getPos(s.getSize()-1,1) == opponent) {
@@ -330,7 +318,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 oppTiles++;
             }
         }
-        if (!(s.getPos(s.getSize()-1,s.getSize()-1) == CellType.EMPTY)) {
+        if ((s.getPos(s.getSize()-1,s.getSize()-1) == CellType.EMPTY)) {
             if (s.getPos(6,s.getSize()-1) == player) {
                 myTiles++;
             } else if (s.getPos(6,s.getSize()-1) == opponent) {
@@ -383,17 +371,16 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 }
             }
             }
-            if (myTiles > oppTiles) {
-                m = (100.0 * myTiles) / (myTiles + oppTiles);
-            } else if (myTiles < oppTiles) {
-                m = -(100.0 * oppTiles) / (myTiles + oppTiles);
-            } else {
-                m = 0;
-            }
-            // Final weighted score
-            int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
-            
-            return ret ;
-           }
-}
+        if (myTiles > oppTiles) {
+            m = (100.0 * myTiles) / (myTiles + oppTiles);
+        } else if (myTiles < oppTiles) {
+            m = -(100.0 * oppTiles) / (myTiles + oppTiles);
+        } else {
+            m = 0;
+        }
+        // Final weighted score
+        int ret = (int) ((10 * p + 801 * c + 382 * l + 78 * m + 74 * f + 10 * d));
 
+        return ret ;
+    }
+}
