@@ -637,7 +637,7 @@ public class PlayerID implements IPlayer, IAuto {
             m = 0;
         }
         // balanceig final
-        ret = (int) (10*p + 800*c + 78*m + 74*f + 150*d + 160*xox + 200*pi);
+        ret = (int) (10*p + 900*c + 78*m + 74* f+ 150*d + 260*xox + 200*pi);
         return ret ;
     }
 }
