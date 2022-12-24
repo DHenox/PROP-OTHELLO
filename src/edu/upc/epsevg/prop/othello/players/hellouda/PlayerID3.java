@@ -345,12 +345,12 @@ public class PlayerID3 implements IPlayer, IAuto {
                 
         };
         CellType opponent = CellType.opposite(player);
-        int[] X2 = {1,0,2,0,1};
-        int[] Y2 = {0,1,0,2,1};
+        int[] X2 = {1,0,2,0,1,2,1,3,0};
+        int[] Y2 = {0,1,0,2,1,1,2,0,3};
         int x =0, y=0;
         if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
             CellType mom= s.getPos(x,y);
-            for(int i=0; i<5; i++){
+            for(int i=0; i<9; i++){
                 int xm=x+X2[i];
                 int ym=y+Y2[i];
                 V[xm][ym]=0;
@@ -369,7 +369,7 @@ public class PlayerID3 implements IPlayer, IAuto {
         if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
             
             CellType mom= s.getPos(x,y);
-            for(int i=0; i<5; i++){
+            for(int i=0; i<9; i++){
                 int xm=x+X2[i];
                 int ym=y-Y2[i];
                 V[xm][ym]=0;
@@ -387,7 +387,7 @@ public class PlayerID3 implements IPlayer, IAuto {
         x =s.getSize()-1; y=0;
         if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
             CellType mom= s.getPos(x,y);
-            for(int i=0; i<5; i++){
+            for(int i=0; i<9; i++){
                 int xm=x-X2[i];
                 int ym=y+Y2[i];
                 V[xm][ym]=0;
@@ -404,7 +404,7 @@ public class PlayerID3 implements IPlayer, IAuto {
         x =s.getSize()-1; y=s.getSize()-1;
         if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
             CellType mom= s.getPos(x,y);
-            for(int i=0; i<5; i++){
+            for(int i=0; i<9; i++){
                 int xm=x-X2[i];
                 int ym=y-Y2[i];
                 V[xm][ym]=0;
