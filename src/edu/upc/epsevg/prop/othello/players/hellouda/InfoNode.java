@@ -20,10 +20,10 @@ public class InfoNode {
     //  true=Exacte, false=Poda
     boolean isExact;
 
-    public InfoNode(byte indexMillorFill, int nivellsPerSota, int heur, boolean isExact, MyGameStatus myGameStatus) {
+    public InfoNode(byte indexMillorFill, long num1, long num2, int nivellsPerSota, int heur, boolean isExact) {
         this.indexMillorFill = indexMillorFill;
-        this.num1 = myGameStatus.getBoard_occupied().toLongArray()[0];
-        this.num2 = myGameStatus.getBoard_color().toLongArray()[0];
+        this.num1 = num1;
+        this.num2 = num2;
         this.nivellsPerSota = nivellsPerSota;
         this.heur = heur;
         this.isExact = isExact;

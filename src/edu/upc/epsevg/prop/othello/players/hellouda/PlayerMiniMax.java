@@ -201,6 +201,7 @@ public class PlayerMiniMax implements IPlayer, IAuto {
                 if (s.getPos(i,j) == player) {
                     d += V[i][j];
                     myTiles++;
+                    
                 } else if (s.getPos(i,j) == opponent) {
                     d -= V[i][j];
                     oppTiles++;

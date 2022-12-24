@@ -158,7 +158,7 @@ public class PlayerID implements IPlayer, IAuto {
                 bestVisited = true;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, maxEval, exact, s);
+        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore,  currentNum1, currentNum2,depth, maxEval, exact);
         return new MyPair(bestMove, maxEval);
     }
 
@@ -226,7 +226,7 @@ public class PlayerID implements IPlayer, IAuto {
                 break;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, minEval, exact, s);
+        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, currentNum1, currentNum2, depth, minEval, exact);
         return minEval;
     }
 
@@ -293,7 +293,7 @@ public class PlayerID implements IPlayer, IAuto {
                 break;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, depth, maxEval, exact, s);
+        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, currentNum1, currentNum2,depth, maxEval, exact);
         return maxEval;
     }
     
