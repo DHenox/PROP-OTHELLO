@@ -12,32 +12,34 @@ import java.util.Random;
 import java.util.ArrayList; 
 
 /**
- * Jugador aleatori
- * @author bernat
+ * Jugador MiniMax amb Iterative Deep Search (IDS)
+ * @author Arnau Roca y Henok Argudo
  */
 public class PlayerID implements IPlayer, IAuto {
-    private String playerName;
     private CellType myType;
-    private CellType hisType;
+    private CellType opponentType;
     private int cntNodes;
     private int maxDepth;
     private long[][][] zobrist;
     private long N;
     private InfoNode[] tTransp;
     private boolean timeOut;
-    private int cntPodes;
+    private int profmax = 64;
 
-    public PlayerID(String name) {
-        playerName = name;
+    /**
+     * Constructor PlayerID, inicialitzem atributs
+     * i generem la zobrist amb numeros aleatoris.
+     */
+    public PlayerID() {
         cntNodes = 0;
         maxDepth = 0;
         timeOut = false;
-        cntPodes = 0;
+        
         zobrist = new long[8][8][2];
         N = 59652323; //2 gb = 119304599 -- 1 gb = 59652323
         tTransp = new InfoNode[(int)N];
         // Creem un objecte Random
-        Random random = new Random();
+        Random random = new Random(N);
         // Inicialitzem la matriu amb valors aleatoris
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -48,6 +50,11 @@ public class PlayerID implements IPlayer, IAuto {
         }
     }
     
+    /**
+     * Funció que retorna el hash únic de un estat de joc.
+     * @param s el joc actual.
+     * @return un long que representa el hash de l'estat actual de joc.
+     */
     public long getHash(GameStatus s){
         long hash  = 0;
         for (int i = 0; i < 8; i++) {
@@ -62,6 +69,9 @@ public class PlayerID implements IPlayer, IAuto {
         return Math.abs(hash);
     }
     
+    /**
+     * Classe auxiliar per emmagatzemar un parell posició i heuristica.
+     */
     private class MyPair{
         Point position;
         int heuristica;
@@ -74,7 +84,7 @@ public class PlayerID implements IPlayer, IAuto {
     
     @Override
     public String getName() {
-        return "Hellowda(" + playerName + ")";
+        return ("Hellouda");
     }
 
     /**
@@ -88,41 +98,41 @@ public class PlayerID implements IPlayer, IAuto {
     }
     
     /**
-     * Decideix el moviment del jugador donat un tauler i un color de peça que
-     * ha de posar.
-     *
-     * @param s Tauler i estat actual de joc.
+     * Utilitzant IDS obté el millor moviment donat un estat de joc.
+     * @param s l'estat de joc actual.
      * @return el moviment que fa el jugador.
      */
     @Override
     public Move move(GameStatus s) {
-        MyGameStatus myGameStatus = new MyGameStatus(s);
-        myType = myGameStatus.getCurrentPlayer();
-        hisType = CellType.opposite(myType);
-        
         cntNodes = 0;
         maxDepth = 0;
-        cntPodes = 0;
         timeOut = false;
+        
+        MyGameStatus myGameStatus = new MyGameStatus(s);
+        myType = myGameStatus.getCurrentPlayer();
+        opponentType = CellType.opposite(myType);
         
         MyPair millorMov = new MyPair(new Point(), Integer.MIN_VALUE);
         int profIDS=1;
-        while(!timeOut){
+        while(!timeOut && profIDS<profmax){
             MyPair mov = triaPosició(myGameStatus, profIDS);
             if(mov.heuristica > millorMov.heuristica){
                 millorMov=mov;
             }
             profIDS++;
         }
-        //System.out.println("nº podes: " + cntPodes);
         return new Move(millorMov.position, cntNodes, profIDS, SearchType.MINIMAX_IDS);
     }
     
+    /**
+     * Funció que retorna el millor moviment per a un estat de joc
+     * i una profunditat determinada, per a cada node afegeix una nova
+     * entrada a la taula de transposició.
+     * @param s l'estat de joc actual.
+     * @param depth la màxima profunditat de la cerca minimax.
+     * @return un Point que representa la posició del moviment.
+     */
     MyPair triaPosició(MyGameStatus s, int depth){
-        if(timeOut){
-            return new MyPair(new Point(), Integer.MIN_VALUE);
-        }
-        
         int bestIndexStored = -1;
         long hash = getHash(s);
         InfoNode storedResult = tTransp[(int)(hash%N)];
@@ -140,9 +150,12 @@ public class PlayerID implements IPlayer, IAuto {
         boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
             if(timeOut){
-                return new MyPair(new Point(), Integer.MIN_VALUE);
+                break;
             }
-            if(bestIndexStored != -1 && !bestVisited){
+            if(i==bestIndexStored && bestVisited && i<moves.size()-1){
+                i++;
+            }
+            if(bestIndexStored != -1 && !bestVisited && bestIndexStored<moves.size()){
                 i = bestIndexStored;
             }
             MyGameStatus fill = new MyGameStatus(s);
@@ -158,21 +171,29 @@ public class PlayerID implements IPlayer, IAuto {
                 bestVisited = true;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore,  currentNum1, currentNum2,depth, maxEval, exact);
+        
+        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore,  currentNum1, currentNum2 ,depth, maxEval, exact);
         return new MyPair(bestMove, maxEval);
     }
 
+    /**
+     * Funció que utilitza l'algorisme minimax amb poda alpha-beta
+     * per obtenir el valor amb mínima heurística, per a cada node
+     * afegeix una nova entrada a la taula de transposició.
+     * @param s l'estat de joc actual.
+     * @param depth la màxima profunditat de la cerca minimax.
+     * @param beta valor beta.
+     * @param alpha valor alpha.
+     * @return el valor heurístic més petit possible a partir del estat actual.
+     */
     int minValor(MyGameStatus s, int depth, int alpha, int beta){
         ++cntNodes;
-        if(timeOut){
-            return Integer.MAX_VALUE;
-        }
 
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
-                return Integer.MAX_VALUE;
+                return Integer.MAX_VALUE-1;
             else                                    //  Guanya el contrincant
-                return Integer.MIN_VALUE;
+                return Integer.MIN_VALUE+1;
         }
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
             return heuristica(s);
@@ -183,16 +204,18 @@ public class PlayerID implements IPlayer, IAuto {
         InfoNode storedResult = tTransp[(int)(hash%N)];
         long currentNum1 = s.getBoard_occupied().toLongArray()[0];
         long currentNum2 = s.getBoard_color().toLongArray()[0];
-        if(storedResult != null && storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
-            if(storedResult.nivellsPerSota >= depth){
-                if(storedResult.isExact == true){
-                    return storedResult.heur;
+        if(storedResult != null ){
+            if(storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
+                if(storedResult.nivellsPerSota >= depth){
+                    if(storedResult.isExact == true){
+                        return storedResult.heur;
+                    }
+                    else if(storedResult.isExact == false){
+                        beta = storedResult.heur;
+                    }
                 }
-                else if(storedResult.isExact == false){
-                    beta = storedResult.heur;
-                }
+                bestIndexStored = storedResult.indexMillorFill;
             }
-            bestIndexStored = storedResult.indexMillorFill;
         }
         
         boolean exact = true;
@@ -201,10 +224,13 @@ public class PlayerID implements IPlayer, IAuto {
         ArrayList<Point> moves = s.getMoves();
         boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
-            if(timeOut){
-                return Integer.MAX_VALUE;
+             if(timeOut){
+                break;
             }
-            if(bestIndexStored != -1 && !bestVisited){
+             if(i==bestIndexStored && bestVisited && i<moves.size()-1){
+                i++;
+            }
+            if(bestIndexStored != -1 && !bestVisited && bestIndexStored < moves.size()){
                 i = bestIndexStored;
             }
             MyGameStatus fill = new MyGameStatus(s);
@@ -221,7 +247,7 @@ public class PlayerID implements IPlayer, IAuto {
                 bestVisited = true;
             }
             if(alpha>=beta){
-                ++cntPodes;
+                
                 exact = false;
                 break;
             }
@@ -230,16 +256,23 @@ public class PlayerID implements IPlayer, IAuto {
         return minEval;
     }
 
+    /**
+     * Funció que utilitza l'algorisme minimax amb poda alpha-beta
+     * per obtenir el valor amb màxima heurística, per a cada node
+     * afegeix una nova entrada a la taula de transposició.
+     * @param s l'estat de joc actual.
+     * @param depth la màxima profunditat de la cerca minimax.
+     * @param beta valor beta.
+     * @param alpha valor alpha.
+     * @return el valor heurístic més gran possible a partir del estat actual.
+     */
     int maxValor(MyGameStatus s, int depth, int alpha, int beta){
         ++cntNodes;
-        if(timeOut){
-            return Integer.MIN_VALUE;
-        }
         if(s.checkGameOver()){                  //ha guanyat algu
             if(myType == s.GetWinner())             //  Guanyem nosaltres
-                return Integer.MAX_VALUE;
+                return Integer.MAX_VALUE-1;
             else                                    //  Guanya el contrincant
-                return Integer.MIN_VALUE;
+                return Integer.MIN_VALUE+1;
         }
         else if(s.isGameOver() || depth==0){    //no hi ha moviments possibles o profunditat es 0
             return heuristica(s);
@@ -250,16 +283,18 @@ public class PlayerID implements IPlayer, IAuto {
         InfoNode storedResult = tTransp[(int)(hash%N)];
         long currentNum1 = s.getBoard_occupied().toLongArray()[0];
         long currentNum2 = s.getBoard_color().toLongArray()[0];
-        if(storedResult != null && storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
-            if(storedResult.nivellsPerSota >= depth){
-                if(storedResult.isExact == true){
-                    return storedResult.heur;
+        if(storedResult != null){
+            if(storedResult.num1 == currentNum1 && storedResult.num2 == currentNum2){
+                if(storedResult.nivellsPerSota >= depth){
+                    if(storedResult.isExact == true){
+                        return storedResult.heur;
+                    }
+                    else if(storedResult.isExact == false){
+                        alpha = storedResult.heur;
+                    }
                 }
-                else if(storedResult.isExact == false){
-                    alpha = storedResult.heur;
-                }
+                bestIndexStored = storedResult.indexMillorFill;
             }
-            bestIndexStored = storedResult.indexMillorFill;
         }
         
         boolean exact = true;
@@ -269,9 +304,12 @@ public class PlayerID implements IPlayer, IAuto {
         boolean bestVisited = false;
         for (int i = 0; i < moves.size(); i++) {
             if(timeOut){
-                return Integer.MIN_VALUE;
+                break;
             }
-            if(bestIndexStored != -1 && !bestVisited){
+            if(i==bestIndexStored && bestVisited && i<moves.size()-1){
+                i++;
+            }
+            if(bestIndexStored != -1 && !bestVisited && bestIndexStored<moves.size()){
                 i = bestIndexStored;
             }
             
@@ -288,61 +326,206 @@ public class PlayerID implements IPlayer, IAuto {
                 bestVisited = true;
             }
             if(alpha>=beta){
-                ++cntPodes;
+                
                 exact = false;
                 break;
             }
         }
-        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, currentNum1, currentNum2,depth, maxEval, exact);
+        tTransp[(int)(getHash(s)%N)] = new InfoNode((byte) bestIndexToStore, currentNum1, currentNum2, depth, maxEval, exact);
         return maxEval;
     }
     
+    /**
+     * Funció que retorna la heuristica de un estat de joc determinat.
+     * @param s l'estat de joc actual.
+     * @return un valor numéric que representa la heuristica del estat de joc actual.
+     */
     public int heuristica(MyGameStatus s) {
-        int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0;
-        double p = 0, c = 0, l = 0, m = 0, f = 0, d = 0, z = 0;
+        int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0, ret=0, cc=0;
+        double p = 0, c = 0, m = 0, f = 0, d = 0, pi=0, xox=0;
 
-        CellType player = myType;
         int[] X1 = {-1, -1, 0, 1, 1, 1, 0, -1};
         int[] Y1 = {0, 1, 1, 1, 0, -1, -1, -1};
         int[][] V = {
-            {20, -3, 11, 8, 8, 11, -3, 20},
-            {-3, -7, -4, 1, 1, -4, -7, -3},
-            {11, -4, 2, 2, 2, 2, -4, 11},
+            {20, -15, 8, 8, 8, 8, -15, 20},
+            {-15, -17, -4, 1, 1, -4, -17, -15},
+            {8, -4, 2, 2, 2, 2, -4, 8},
             {8, 1, 2, -3, -3, 2, 1, 8},
             {8, 1, 2, -3, -3, 2, 1, 8},
-            {11, -4, 2, 2, 2, 2, -4, 11},
-            {-3, -7, -4, 1, 1, -4, -7, -3},
-            {20, -3, 11, 8, 8, 11, -3, 20}
+            {8, -4, 2, 2, 2, 2, -4, 11},
+            {-15, -17, -4, 1, 1, -4, -17, -15},
+            {20, -15, 8, 8, 8, 11, -15, 20}
+                
+                
         };
-        CellType opponent = CellType.opposite(player);
-
-        // Piece difference, frontier disks and disk squares
-        for (int i = 0; i < s.getSize(); i++) {
-            for (int j = 0; j < s.getSize(); j++) {
-                if (s.getPos(i,j) == player) {
-                    d += V[i][j];
-                    myTiles++;
-                } else if (s.getPos(i,j) == opponent) {
-                    d -= V[i][j];
-                    oppTiles++;
-                }
-                if (s.getPos(i,j) == opponent || s.getPos(i,j) == player) {
-                    for (int k = 0; k < 8; k++) {
-                        int x = i + X1[k];
-                        int y = j + Y1[k];
-                        if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
-                            if (s.getPos(i,j) == player){
-                                myFrontTiles++;
-                            }
-                        } else {
-                            oppFrontTiles++;
-                        }
-                        break;
+        //  mirem si fem una piramide al corner 0,0 (cel·les ocupades que son immobils)
+        int[] X2 = {0,1,0,2,0,1,2,1,3,0};
+        int[] Y2 = {0,0,1,0,2,1,1,2,0,3};
+        int x =0, y=0;
+        myTiles=0;oppTiles=0;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<10; i++){
+                int xm=x+X2[i];
+                int ym=y+Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        myTiles+=1;
+                    }
+                    else{
+                        oppTiles+=1;
                     }
                 }
             }
         }
+        //  mirem si fem una piramide al corner 0,7 (cel·les ocupades que son immobils)
+        x =0; y=s.getSize()-1;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<10; i++){
+                int xm=x+X2[i];
+                int ym=y-Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        myTiles+=1;
+                    }
+                    else{
+                        oppTiles+=1;
+                    }
+                }
+            }
+        }
+        
+        //  mirem si fem una piramide al corner 7,0 (cel·les ocupades que son immobils)
+        x =s.getSize()-1; y=0;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<10; i++){
+                int xm=x-X2[i];
+                int ym=y+Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        myTiles+=1;
+                    }
+                    else{
+                        oppTiles+=1;
+                    }
+                }
+            }
+        }
+        //  mirem si fem una piramide al corner 7,7 (cel·les ocupades que son immobils)
+        x =s.getSize()-1; y=s.getSize()-1;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<10; i++){
+                int xm=x-X2[i];
+                int ym=y-Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        myTiles+=1;
+                    }
+                    else{
+                        oppTiles+=1;
+                    }
+                    
+                }
+            }
+        }
+        if (myTiles > oppTiles) {
+            pi = (100.0 * myTiles) / (myTiles + oppTiles);
+        } else if (myTiles < oppTiles) {
+            pi = -(100.0 * oppTiles) / (myTiles + oppTiles);
+        } else {
+            pi = 0;
+        }
+        
+        //  mirem cas X0X nostre en les files del cantó (de 0,0 a 7,0) i (0,7 a 7,7)
+        myTiles=0;oppTiles=0;
+        x=0;y=0;
+        for(int i=0; i<s.getSize()-3; ++i){
+            int xm=x+i;
+            if ((s.getPos(xm,y) == opponentType)){
+                if(s.getPos(xm+2,y) == opponentType && s.getPos(xm+1,y)==myType){
+                    myTiles += 1;
+                }
+                y=s.getSize()-1;
+                if(s.getPos(xm+2,y) == opponentType && s.getPos(xm+1,y)==myType){
+                    myTiles += 1;
+                }
+            }
+            if ((s.getPos(xm,y) == myType)){
+                if(s.getPos(xm+2,y) == myType && s.getPos(xm+1,y)==opponentType){
+                    oppTiles += 1;
+                }
+                y=s.getSize()-1;
+                if(s.getPos(xm+2,y) == myType && s.getPos(xm+1,y)==opponentType){
+                    oppTiles += 1;
+                }
+            }
+        }
+        //  mirem cas X0X nostre en les columnes del cantó (de 0,0 a 0,7) i (7,0 a 7,7)
+        x=0;y=0;
+        for(int i=0; i<s.getSize()-3; ++i){
+            int ym=y+i;
+            if ((s.getPos(x,ym) == opponentType)){
+                if(s.getPos(x,ym+2) == opponentType && s.getPos(x,ym+1)==myType){
+                    myTiles += 1;
+                }
+                x=s.getSize()-1;
+                if(s.getPos(x,ym+2) == opponentType && s.getPos(x,ym+2)==myType){
+                    myTiles += 1;
+                }
+            }
+            if ((s.getPos(x,ym) == myType)){
+                if(s.getPos(x,ym+2) == myType && s.getPos(x,ym+1)==opponentType){
+                    oppTiles += 1;
+                }
+                x=s.getSize()-1;
+                if(s.getPos(x,ym+2) == myType && s.getPos(x,ym+1)==opponentType){
+                    oppTiles += 1;
+                }
+            }
+        }
+        if (myTiles > oppTiles) {
+            xox = (100.0 * myTiles) / (myTiles + oppTiles);
+        } else if (myTiles < oppTiles) {
+            xox = -(100.0 * oppTiles) / (myTiles + oppTiles);
+        } else {
+            xox = 0;
+        }
+        //  mirem la taula de valors i les fitxer frontera (fitxes que tenen al
+        //  costat fitxes buides) mirar documentació per saber que es una fitxa frontera.
+        for (int i = 0; i < s.getSize(); i++) {
+            for (int j = 0; j < s.getSize(); j++) {
+                if (s.getPos(i,j) == myType) {
+                    d += V[i][j];
 
+                } else if (s.getPos(i,j) == opponentType) {
+                    d -= V[i][j];
+                }
+                if (s.getPos(i,j) == opponentType || s.getPos(i,j) == myType) {
+                    for (int k = 0; k < 8; k++) {
+                        x = i + X1[k];
+                        y = j + Y1[k];
+                        if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
+                            if (s.getPos(i,j) == myType){
+                                myFrontTiles++;
+                            } else if(s.getPos(i,j) == opponentType){
+                                oppFrontTiles++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        //  mirem el nombre de fitxes de cada jugador
+        myTiles=s.getScore(myType);
+        oppTiles=s.getScore(opponentType);
         if (myTiles > oppTiles) {
             p = (100.0 * myTiles) / (myTiles + oppTiles);
         } else if (myTiles < oppTiles) {
@@ -350,7 +533,7 @@ public class PlayerID implements IPlayer, IAuto {
         } else {
             p = 0;
         }
-        
+        //  posem les fitxes frontera en tant per cent
         if (myFrontTiles > oppFrontTiles) {
             f = -(100.0 * myFrontTiles) / (myFrontTiles + oppFrontTiles);
         } else if (myFrontTiles < oppFrontTiles) {
@@ -358,183 +541,61 @@ public class PlayerID implements IPlayer, IAuto {
         } else {
             f = 0;
         }
-        
-        // Corner occupancy
+
+        // mirem l'ocupació dels corners
         myTiles = oppTiles = 0;
-        if (s.getPos(0,0) == player) {
+        if (s.getPos(0,0) == myType) {
             myTiles += 1;
         }
-        else if (s.getPos(0,0) == (opponent)) {
+        else if (s.getPos(0,0) == (opponentType)) {
             oppTiles += 1;
         }
-        if (s.getPos(0,s.getSize()-1) == player) {
+        if (s.getPos(0,s.getSize()-1) == myType) {
             myTiles += 1;
         }
-        else if (s.getPos(0,s.getSize()-1) == (opponent)) {
+        else if (s.getPos(0,s.getSize()-1) == (opponentType)) {
             oppTiles += 1;
         }
-        if (s.getPos(s.getSize()-1,0) == player) {
+        if (s.getPos(s.getSize()-1,0) == myType) {
             myTiles += 1;
         }
-        else if (s.getPos(s.getSize()-1,0) == (opponent)) {
+        else if (s.getPos(s.getSize()-1,0) == (opponentType)) {
             oppTiles += 1;
         }
-        if (s.getPos(s.getSize()-1, s.getSize()-1) == player) {
+        if (s.getPos(s.getSize()-1, s.getSize()-1) == myType) {
             myTiles += 1;
         }
-        else if (s.getPos(s.getSize()-1, s.getSize()-1) == (opponent)) {
+        else if (s.getPos(s.getSize()-1, s.getSize()-1) == (opponentType)) {
             oppTiles += 1;
         }
-            
+
         c = 25 * (myTiles - oppTiles);
-        
-        // Corner closeness
-        myTiles = oppTiles = 0;
-        //  0=empty, 1=nosaltres 2=contrincant
-        boolean closenessState = false;
-        if ((s.getPos(0,0) == CellType.EMPTY)) {
-            closenessState = false;
-        }
-        else{
-            closenessState = true;
-        }
-        
-        if (s.getPos(0,1) == player) {
-            myTiles++;
-        } else if (s.getPos(0,1) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(1,1) == player) {
-            myTiles++;
-        } else if (s.getPos(1,1) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(1,0) == player) {
-            myTiles++;
-        } else if (s.getPos(1,0) == opponent) {
-            oppTiles++;
-        }
-        if(!closenessState){
-            l += -12.5 * (myTiles - oppTiles);
-        }
-        else{
-            z += 33 * (myTiles - oppTiles);
-        }
-        myTiles = 0;
-        oppTiles = 0;
-        
-        
-        //  0=empty, 1=nosaltres 2=contrincant
-        closenessState = false;
-        if ((s.getPos(0,s.getSize()-1) == CellType.EMPTY)) {
-            closenessState = false;
-        }
-        else{
-            closenessState = true;
-        }
-        if (s.getPos(0,6) == player) {
-            myTiles++;
-        } else if (s.getPos(0,6) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(1,6) == player) {
-            myTiles++;
-        } else if (s.getPos(1,6) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(1,s.getSize()-1) == player) {
-            myTiles++;
-        } else if (s.getPos(1,s.getSize()-1) == opponent) {
-            oppTiles++;
-        }
-        if(!closenessState){
-            l += -12.5 * (myTiles - oppTiles);
-        }
-        else{
-            z += 33 * (myTiles - oppTiles);
-        }
-        myTiles = 0;
-        oppTiles = 0;
-        
-        
-        //  0=empty, 1=nosaltres 2=contrincant
-        closenessState = false;
-        if ((s.getPos(s.getSize()-1,0) == CellType.EMPTY)) {
-            closenessState = false;
-        }
-        else{
-            closenessState = true;
-        }
-        if (s.getPos(s.getSize()-1,1) == player) {
-            myTiles++;
-        } else if (s.getPos(s.getSize()-1,1) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(6,1) == player) {
-            myTiles++;
-        } else if (s.getPos(6,1) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(6,0) == player) {
-            myTiles++;
-        } else if (s.getPos(6,0) == opponent) {
-            oppTiles++;
-        }
-        if(!closenessState){
-            l += -12.5 * (myTiles - oppTiles);
-        }
-        else{
-            z += 33 * (myTiles - oppTiles);
-        }
-        myTiles = 0;
-        oppTiles = 0;
-        
-        
-        //  0=empty, 1=nosaltres 2=contrincant
-        closenessState = false;
-        if ((s.getPos(s.getSize()-1,s.getSize()-1) == CellType.EMPTY)) {
-            closenessState = false;
-        }
-        else{
-            closenessState = true;
-        }
-        if (s.getPos(6,s.getSize()-1) == player) {
-            myTiles++;
-        } else if (s.getPos(6,s.getSize()-1) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(6,6) == player) {
-            myTiles++;
-        } else if (s.getPos(6,6) == opponent) {
-            oppTiles++;
-        }
-        if (s.getPos(s.getSize()-1,6) == player) {
-            myTiles++;
-        } else if (s.getPos(s.getSize()-1,6) == opponent) {
-            oppTiles++;
-        }
-        if(!closenessState){
-            l += -12.5 * (myTiles - oppTiles);
-        }
-        else{
-            z += 33 * (myTiles - oppTiles);
-        }
-        myTiles = 0;
-        oppTiles = 0;
-        
-        // Mobility
+
+        // mirem la mobilitat de cada jugador
         myTiles = oppTiles = 0;
         for (int i = 0; i < s.getSize(); i++) {
             for (int j = 0; j < s.getSize(); j++) {
-                if (!(s.getPos(0,0) == CellType.EMPTY)) {
+                if (s.getPos(i,j) == myType) {
                     for (int k = 0; k < s.getSize(); k++) {
-                        int x = i + X1[k];
-                        int y = j + Y1[k];
-                        if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == opponent) {
-                            if (myTiles < 64) {
-                                myTiles++;
+                        x = i + X1[k];
+                        y = j + Y1[k];
+                        if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == opponentType) {
+                            x += X1[k];
+                            y += Y1[k];
+                            boolean inside = x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize();
+                            if(inside){
+                                CellType auxCell = s.getPos(x, y);
+                                while(auxCell != CellType.EMPTY && auxCell != myType && inside){
+                                    x += X1[k];
+                                    y += Y1[k];
+                                    inside = x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize();
+                                    if(inside)
+                                        auxCell = s.getPos(x, y);
+                                }
+                                if (auxCell == CellType.EMPTY  && inside) {
+                                    myTiles++;
+                                }
                             }
-                           break;
                         }
                     }
                 }
@@ -542,15 +603,27 @@ public class PlayerID implements IPlayer, IAuto {
         }
         for (int i = 0; i < s.getSize(); i++) {
             for (int j = 0; j < s.getSize(); j++) {
-                if (!(s.getPos(0,0) == CellType.EMPTY)) {
+                if (s.getPos(i,j) == opponentType) {
                     for (int k = 0; k < s.getSize(); k++) {
-                        int x = i + X1[k];
-                        int y = j + Y1[k];
-                        if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == player) {
-                            if (oppTiles < 64) {
-                                oppTiles++;
+                        x = i + X1[k];
+                        y = j + Y1[k];
+                        if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == myType) {
+                            x += X1[k];
+                            y += Y1[k];
+                            boolean inside = x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize();
+                            if(inside){
+                                CellType auxCell = s.getPos(x, y);
+                                while(auxCell != CellType.EMPTY && auxCell != opponentType  && inside){
+                                    x += X1[k];
+                                    y += Y1[k];
+                                    inside = x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize();
+                                    if(inside)
+                                        auxCell = s.getPos(x, y);
+                                }
+                                if (auxCell == CellType.EMPTY  && inside) {
+                                    oppTiles++;
+                                }
                             }
-                            break;
                         }
                     }
                 }
@@ -563,8 +636,8 @@ public class PlayerID implements IPlayer, IAuto {
         } else {
             m = 0;
         }
-        // Final weighted score
-        int ret = (int) ((10 * p + 801 * c + 282 * l + 78 * m + 74 * f + 10 * d + 700 *z));
+        // balanceig final
+        ret = (int) (10*p + 800*c + 78*m + 74*f + 150*d + 160*xox + 200*pi);
         return ret ;
     }
 }
