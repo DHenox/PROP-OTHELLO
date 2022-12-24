@@ -345,37 +345,81 @@ public class PlayerID3 implements IPlayer, IAuto {
                 
         };
         CellType opponent = CellType.opposite(player);
-        
-        
-        if (!(s.getPos(0,0) == CellType.EMPTY)){
-            for (int i = 0; i <= 3; i++) {
-                for (int j = 0; j <= 3; j++) {
-                    V[i][j] = 0;
+        int[] X2 = {1,0,2,0,1};
+        int[] Y2 = {0,1,0,2,1};
+        int x =0, y=0;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<5; i++){
+                int xm=x+X2[i];
+                int ym=y+Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        cc+=40;
+                    }
+                    else{
+                        cc-=40;
+                    }
+                }
+            }
+        }
+       
+        x =0; y=s.getSize()-1;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<5; i++){
+                int xm=x+X2[i];
+                int ym=y-Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        cc+=40;
+                    }
+                    else{
+                        cc-=40;
+                    }
                 }
             }
         }
         
-        if(!(s.getPos(0,s.getSize()-1) == CellType.EMPTY)){
-            for (int i = 0; i <= 3; i++) {
-                for (int j = 4; j <= 7; j++) {
-                    V[i][j] = 0;
+        x =s.getSize()-1; y=0;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<5; i++){
+                int xm=x-X2[i];
+                int ym=y+Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        cc+=40;
+                    }
+                    else{
+                        cc-=40;
+                    }
                 }
             }
         }
-        if(!(s.getPos(s.getSize()-1,0) == CellType.EMPTY)){
-            for (int i = 4; i <= 7; i++) {
-                for (int j = 0; j <= 3; j++) {
-                    V[i][j] = 0;
+        x =s.getSize()-1; y=s.getSize()-1;
+        if(s.getPos(x,y)==CellType.PLAYER1 || s.getPos(x,y)==CellType.PLAYER2){
+            CellType mom= s.getPos(x,y);
+            for(int i=0; i<5; i++){
+                int xm=x-X2[i];
+                int ym=y-Y2[i];
+                V[xm][ym]=0;
+                if(s.getPos(xm,ym)==mom){
+                    if(mom == myType){
+                        cc+=40;
+                    }
+                    else{
+                        cc-=40;
+                    }
+                    
                 }
             }
         }
-        if(!(s.getPos(s.getSize()-1,s.getSize()-1) == CellType.EMPTY)){
-            for (int i = 4; i <= 7; i++) {
-                for (int j = 4; j <= 7; j++) {
-                    V[i][j] = 0;
-                }
-            }
-        }
+        
         //mirem cas X0X nostre
         if ((s.getPos(0,0) == opponent)){
             if(s.getPos(0,2) == opponent && s.getPos(0,1)==player){
@@ -460,8 +504,8 @@ public class PlayerID3 implements IPlayer, IAuto {
                         }
                         if (s.getPos(i,j) == opponent || s.getPos(i,j) == player) {
                             for (int k = 0; k < 8; k++) {
-                                int x = i + X1[k];
-                                int y = j + Y1[k];
+                                x = i + X1[k];
+                                y = j + Y1[k];
                                 if (x >= 0 && x < 8 && y >= 0 && y < 8 && (s.getPos(x,y) == CellType.EMPTY)) {
                                     if (s.getPos(i,j) == player){
                                         myFrontTiles++;
@@ -596,8 +640,8 @@ public class PlayerID3 implements IPlayer, IAuto {
                     for (int j = 0; j < s.getSize(); j++) {
                         if (s.getPos(i,j) == player) {
                             for (int k = 0; k < s.getSize(); k++) {
-                                int x = i + X1[k];
-                                int y = j + Y1[k];
+                                x = i + X1[k];
+                                y = j + Y1[k];
                                 if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == opponent) {
                                     x += X1[k];
                                     y += Y1[k];
@@ -624,8 +668,8 @@ public class PlayerID3 implements IPlayer, IAuto {
                     for (int j = 0; j < s.getSize(); j++) {
                         if (s.getPos(i,j) == opponent) {
                             for (int k = 0; k < s.getSize(); k++) {
-                                int x = i + X1[k];
-                                int y = j + Y1[k];
+                                x = i + X1[k];
+                                y = j + Y1[k];
                                 if (x >= 0 && x < s.getSize() && y >= 0 && y < s.getSize() && s.getPos(x,y) == player) {
                                     x += X1[k];
                                     y += Y1[k];
