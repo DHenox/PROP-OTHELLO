@@ -477,7 +477,7 @@ public class PlayerID implements IPlayer, IAuto {
                     myTiles += 1;
                 }
                 x=s.getSize()-1;
-                if(s.getPos(x,ym+2) == opponentType && s.getPos(x,ym+2)==myType){
+                if(s.getPos(x,ym+2) == opponentType && s.getPos(x,ym+1)==myType){
                     myTiles += 1;
                 }
             }
