@@ -343,9 +343,7 @@ public class PlayerID implements IPlayer, IAuto {
     public int heuristica(MyGameStatus s) {
         int myTiles = 0, oppTiles = 0, myFrontTiles = 0, oppFrontTiles = 0, ret=0, cc=0;
         double p = 0, c = 0, m = 0, f = 0, d = 0, pi=0, xox=0;
-
-        int[] X1 = {-1, -1, 0, 1, 1, 1, 0, -1};
-        int[] Y1 = {0, 1, 1, 1, 0, -1, -1, -1};
+        // Matriu de pesos 
         int[][] V = {
             {20, -15, 8, 8, 8, 8, -15, 20},
             {-15, -17, -4, 1, 1, -4, -17, -15},
@@ -500,6 +498,10 @@ public class PlayerID implements IPlayer, IAuto {
         }
         //  mirem la taula de valors i les fitxer frontera (fitxes que tenen al
         //  costat fitxes buides) mirar documentació per saber que es una fitxa frontera.
+        
+        int[] X1 = {-1, -1, 0, 1, 1, 1, 0, -1};
+        int[] Y1 = {0, 1, 1, 1, 0, -1, -1, -1};
+        
         for (int i = 0; i < s.getSize(); i++) {
             for (int j = 0; j < s.getSize(); j++) {
                 if (s.getPos(i,j) == myType) {
